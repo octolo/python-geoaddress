@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-
 from . import GeoaddressProvider
 
 
@@ -164,6 +163,8 @@ class GeocodeEarthProvider(GeoaddressProvider):
                     continue
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -232,6 +233,8 @@ class GeocodeEarthProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -301,6 +304,8 @@ class GeocodeEarthProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}

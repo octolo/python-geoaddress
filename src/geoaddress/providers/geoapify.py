@@ -76,7 +76,9 @@ class GeoapifyProvider(GeoaddressProvider):
 
         address_type = properties.get("type", "") or properties.get("category", "")
 
-        reference = properties.get("place_id") or feature.get("id")
+        reference = None
+        if latitude is not None and longitude is not None:
+            reference = f"{latitude}-{longitude}"
 
         return {
             "address_line1": address_line1 or "",
@@ -158,6 +160,9 @@ class GeoapifyProvider(GeoaddressProvider):
                         normalized["longitude"] = float(coords[0])
                         normalized["latitude"] = float(coords[1])
 
+                if normalized.get("latitude") is not None and normalized.get("longitude") is not None:
+                    normalized["reference"] = f"{normalized['latitude']}-{normalized['longitude']}"
+
                 normalized["backend"] = self.display_name
                 normalized["backend_name"] = self.name
                 normalized["text"] = self._build_address_string(normalized)
@@ -176,6 +181,8 @@ class GeoapifyProvider(GeoaddressProvider):
                 addresses.append(normalized)
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -230,6 +237,7 @@ class GeoapifyProvider(GeoaddressProvider):
 
             normalized["latitude"] = latitude
             normalized["longitude"] = longitude
+            normalized["reference"] = f"{latitude}-{longitude}"
 
             normalized["backend"] = self.display_name
             normalized["backend_name"] = self.name
@@ -244,6 +252,8 @@ class GeoapifyProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -253,80 +263,7 @@ class GeoapifyProvider(GeoaddressProvider):
                 return {"error": str(e)}
             return None
 
-    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
+    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
+        """Get address by reference (latitude-longitude) using reverse geocoding."""
+        return self.get_address_by_reference_latlon(reference, raw=raw)
 
-        """Get address by reference (place_id) using Geoapify."""
-        if not self._api_key:
-            if raw:
-                return {"error": "GEOAPIFY_API_KEY not configured"}
-            return None
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
-        params = {
-            "apiKey": self._api_key,
-            "place_id": reference,
-        }
-
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode/search",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if raw:
-                features = result.get("features", []) if isinstance(result, dict) else []
-                return features[0] if features else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            features = result.get("features", []) if isinstance(result, dict) else []
-            if not features:
-                return None
-
-            feature = features[0]
-            normalized = self._extract_address_from_feature(feature)
-
-            properties = feature.get("properties", {})
-            lat_prop = properties.get("lat")
-            lon_prop = properties.get("lon")
-            if lat_prop is not None:
-                normalized["latitude"] = float(lat_prop)
-            if lon_prop is not None:
-                normalized["longitude"] = float(lon_prop)
-
-            if normalized.get("latitude") is None or normalized.get("longitude") is None:
-                coords = feature.get("geometry", {}).get("coordinates", [])
-                if len(coords) >= 2:
-                    normalized["longitude"] = float(coords[0])
-                    normalized["latitude"] = float(coords[1])
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-
-            normalized["confidence"] = self._calculate_confidence(
-                normalized,
-                feature=feature,
-                importance_key="properties.rank.confidence",
-            )
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None

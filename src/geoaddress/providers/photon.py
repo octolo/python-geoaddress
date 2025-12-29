@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-
 from . import GeoaddressProvider
 
 
@@ -72,11 +71,15 @@ class PhotonProvider(GeoaddressProvider):
         elif osm_value:
             address_type = osm_value
 
+        coords = feature.get("geometry", {}).get("coordinates", [])
+        reference = None
+        if len(coords) >= 2:
+            latitude = float(coords[1])
+            longitude = float(coords[0])
+            reference = f"{latitude}-{longitude}"
+
         osm_id = properties.get("osm_id")
         osm_type = properties.get("osm_type")
-        reference = None
-        if osm_id is not None and osm_type:
-            reference = f"{osm_type}:{osm_id}"
 
         return {
             "address_line1": address_line1,
@@ -164,6 +167,8 @@ class PhotonProvider(GeoaddressProvider):
                 addresses.append(normalized)
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -231,6 +236,8 @@ class PhotonProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -239,5 +246,9 @@ class PhotonProvider(GeoaddressProvider):
             if raw:
                 return {"error": str(e)}
             return None
+
+    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
+        """Get address by reference (latitude-longitude) using reverse geocoding."""
+        return self.get_address_by_reference_latlon(reference, raw=raw)
 
 

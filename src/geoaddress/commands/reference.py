@@ -1,13 +1,13 @@
 """Reference command for getting address by reference."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import sys
 from typing import TYPE_CHECKING, Any
 
-from providerkit.cli import _get_package_name  # noqa: TID252
-from geoaddress.helpers import get_address_by_reference
 from qualitybase.commands.base import Command
+
+from geoaddress.helpers import get_address_by_reference
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -74,8 +74,6 @@ def _reference_command(args: list[str]) -> bool:  # noqa: C901
     if not reference:
         print("Error: --ref is required", file=sys.stderr)
         return False
-
-    lib_name = _get_package_name()
 
     providers_args: dict[str, Any] = {
         "format": output_format,

@@ -30,7 +30,7 @@ def get_address_providers(
     )
     if not len(providers):
         raise ValueError("No providers found")
-    return providers
+    return providers  # type: ignore[no-any-return]
 
 
 def get_address_provider(
@@ -45,7 +45,7 @@ def get_address_provider(
     if len(providers) > 1:
         raise ValueError(f"Expected 1 provider, got {len(providers)}")
     return providers[0]
-    
+
 
 def search_addresses(
     query: str,
@@ -58,6 +58,7 @@ def search_addresses(
     base_module: str | None = None,
     query_string: str | None = None,
     search_fields: list[str] | None = None,
+    parallel: bool = False,
     **kwargs: Any,
 ) -> Any:
     """Search addresses using providers."""
@@ -82,7 +83,7 @@ def search_addresses(
     return try_providers(**providers_args)
 
 
-def get_address_by_reference(
+def get_address_by_reference(  # noqa: ARG001
     reference: str,
     first: bool = False,
     providers: dict[str, Any] | None = None,

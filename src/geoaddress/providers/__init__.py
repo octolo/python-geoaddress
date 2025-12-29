@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import re
 import unicodedata
 from math import atan2, cos, radians, sin, sqrt
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from providerkit import ProviderBase
 
 from geoaddress import GEOADDRESS_FIELDS_DESCRIPTIONS
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class GeoaddressProvider(ProviderBase):
@@ -78,7 +82,7 @@ class GeoaddressProvider(ProviderBase):
             importance_val = float(importance)
             confidence = min(importance_val * multiplier, 1.0)
             if confidence >= 0.3:
-                return self._round_score(max(0.0, confidence))
+                return self._round_score(max(0.0, confidence) * 100.0)
         except (ValueError, TypeError):
             pass
         return None
@@ -89,12 +93,12 @@ class GeoaddressProvider(ProviderBase):
         postal_code = normalized.get("postal_code") or ""
 
         if address_line1 and any(c.isdigit() for c in address_line1):
-            return 0.9
+            return 90.0
         if address_line1:
-            return 0.7
+            return 70.0
         if city or postal_code:
-            return 0.5
-        return 0.3
+            return 50.0
+        return 30.0
 
     def _calculate_confidence(
         self,
@@ -124,26 +128,62 @@ class GeoaddressProvider(ProviderBase):
         normalized_result: dict[str, Any],
         weights: dict[str, float],
     ) -> float:
+        import re
+
         score = 0.0
 
         q_street = query_components.get("address_line1") or ""
-        r_street = normalized_result.get("address_line1") or ""
-        if self._normalize_string_for_comparison(q_street) == self._normalize_string_for_comparison(r_street):
-            score += weights.get("street", 0)
 
-        q_post = query_components.get("postal_code") or ""
-        r_post = normalized_result.get("postal_code") or ""
-        if self._normalize_string_for_comparison(q_post) == self._normalize_string_for_comparison(r_post):
-            score += weights.get("postcode", 0)
+        field_rules: list[dict[str, Any]] = [
+            {
+                "query_key": "address_line1",
+                "result_key": "address_line1",
+                "weight_key": "street",
+                "extract_from_query": None,
+                "match_type": "partial",
+            },
+            {
+                "query_key": "postal_code",
+                "result_key": "postal_code",
+                "weight_key": "postcode",
+                "extract_from_query": lambda: (match.group(0) if q_street and (match := re.search(r"\b\d{5}\b", q_street)) else ""),
+                "match_type": "partial",
+            },
+            {
+                "query_key": ["city", "village", "town", "municipality"],
+                "result_key": ["city", "village", "town", "municipality"],
+                "weight_key": "city",
+                "extract_from_query": None,
+                "match_type": "bidirectional",
+            },
+        ]
 
-        city_keys = ["city", "village", "town", "municipality"]
-        q_city = next((query_components.get(k) for k in city_keys if query_components.get(k)), "")
-        r_city = next((normalized_result.get(k) for k in city_keys if normalized_result.get(k)), "")
-        if q_city and r_city:
-            q_city_norm = self._normalize_string_for_comparison(q_city)
-            r_city_norm = self._normalize_string_for_comparison(r_city)
-            if q_city_norm == r_city_norm or q_city_norm in r_city_norm or r_city_norm in q_city_norm:
-                score += weights.get("city", 0)
+        for rule in field_rules:
+            q_keys: list[str] = rule["query_key"] if isinstance(rule["query_key"], list) else [rule["query_key"]]  # type: ignore[assignment]
+            r_keys: list[str] = rule["result_key"] if isinstance(rule["result_key"], list) else [rule["result_key"]]  # type: ignore[assignment]
+            weight_key: str = rule["weight_key"]  # type: ignore[assignment]
+            match_type: str = rule["match_type"]  # type: ignore[assignment]
+
+            q_value = next((query_components.get(k) for k in q_keys if query_components.get(k)), "")
+            extract_func: Callable[[], str] | None = rule.get("extract_from_query")
+            if extract_func and not q_value:
+                q_value = extract_func() or ""
+
+            r_value = next((normalized_result.get(k) for k in r_keys if normalized_result.get(k)), "")
+
+            if q_value and r_value:
+                q_norm = self._normalize_string_for_comparison(q_value)
+                r_norm = self._normalize_string_for_comparison(r_value)
+                weight = weights.get(weight_key, 0)
+
+                if match_type == "bidirectional":
+                    if q_norm == r_norm or q_norm in r_norm or r_norm in q_norm:
+                        score += weight
+                else:
+                    if q_norm == r_norm:
+                        score += weight
+                    elif r_norm in q_norm:
+                        score += weight * 0.7
 
         return score
 
@@ -272,4 +312,39 @@ class GeoaddressProvider(ProviderBase):
             List of normalized addresses or None if not implemented or error.
         """
         return None
+
+    def get_address_by_reference_latlon(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
+        """Get address by reference (latitude-longitude) using reverse geocoding.
+
+        This is a helper method for providers that use latitude-longitude format as reference.
+        It parses the reference and calls reverse_geocode.
+
+        Args:
+            reference: Reference string in format "latitude-longitude" (e.g., "49.287724-2.494634").
+            raw: If True, return raw provider response.
+
+        Returns:
+            Normalized address dictionary or None if error.
+        """
+        if not reference:
+            if raw:
+                return {"error": "Reference is required"}
+            return None
+
+        try:
+            match = re.match(r"^(-?\d+\.?\d*)-(-?\d+\.?\d*)$", reference)
+            if not match:
+                if raw:
+                    return {"error": "Invalid reference format. Expected 'latitude-longitude'"}
+                return None
+
+            latitude = float(match.group(1))
+            longitude = float(match.group(2))
+        except (ValueError, IndexError):
+            if raw:
+                return {"error": "Invalid latitude/longitude in reference"}
+            return None
+
+        result = self.reverse_geocode(latitude, longitude, raw=raw)
+        return result if isinstance(result, dict) else None
 

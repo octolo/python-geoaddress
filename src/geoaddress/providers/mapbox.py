@@ -4,7 +4,6 @@ import time
 import urllib.parse
 from typing import Any
 
-
 from . import GeoaddressProvider
 
 
@@ -87,7 +86,13 @@ class MapboxProvider(GeoaddressProvider):
                 break
 
         address_type = properties.get("type", "")
-        feature_id = feature.get("id")
+
+        coords = feature.get("geometry", {}).get("coordinates", [])
+        reference = None
+        if len(coords) >= 2:
+            latitude = float(coords[1])
+            longitude = float(coords[0])
+            reference = f"{latitude}-{longitude}"
 
         return {
             "address_line1": address_line1,
@@ -102,7 +107,7 @@ class MapboxProvider(GeoaddressProvider):
             "municipality": municipality,
             "neighbourhood": neighbourhood,
             "address_type": address_type,
-            "reference": str(feature_id) if feature_id is not None else None,
+            "reference": reference,
         }
 
     def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
@@ -161,20 +166,19 @@ class MapboxProvider(GeoaddressProvider):
                 normalized["backend"] = self.display_name
                 normalized["backend_name"] = self.name
                 normalized["text"] = self._build_address_string(normalized)
-                normalized["confidence"] = self._calculate_confidence(
-                    normalized,
-                    feature=feature,
-                    importance_key="relevance",
-                )
-                normalized["relevance"] = self._calculate_relevance(
-                    {"address_line1": query},
-                    normalized,
-                )
+                normalized["confidence"] = self._calculate_confidence_heuristic(normalized)
+                relevance_value = feature.get("relevance")
+                if relevance_value is not None:
+                    normalized["relevance"] = self._round_score(float(relevance_value) * 100.0)
+                else:
+                    normalized["relevance"] = 0.0
                 normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
                 normalized = self._order_normalized_fields(normalized)
                 addresses.append(normalized)
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -234,15 +238,18 @@ class MapboxProvider(GeoaddressProvider):
             normalized["backend"] = self.display_name
             normalized["backend_name"] = self.name
             normalized["text"] = self._build_address_string(normalized)
-            normalized["confidence"] = self._calculate_confidence(
-                normalized,
-                feature=feature,
-                importance_key="relevance",
-            )
+            normalized["confidence"] = self._calculate_confidence_heuristic(normalized)
+            relevance_value = feature.get("relevance")
+            if relevance_value is not None:
+                normalized["relevance"] = self._round_score(float(relevance_value) * 100.0)
+            else:
+                normalized["relevance"] = 0.0
             normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -252,70 +259,6 @@ class MapboxProvider(GeoaddressProvider):
                 return {"error": str(e)}
             return None
 
-    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
-        """Get address by reference (feature ID) using Mapbox."""
-        if not self._access_token:
-            if raw:
-                return {"error": "MAPBOX_ACCESS_TOKEN not configured"}
-            return None
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
-        encoded_id = urllib.parse.quote(reference)
-        params = {
-            "access_token": self._access_token,
-        }
-
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocoding/v5/mapbox.places/{encoded_id}.json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if raw:
-                features = result.get("features", []) if isinstance(result, dict) else []
-                return features[0] if features else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            features = result.get("features", []) if isinstance(result, dict) else []
-            if not features:
-                return None
-
-            feature = features[0]
-            normalized = self._extract_address_from_feature(feature)
-
-            coords = feature.get("geometry", {}).get("coordinates", [])
-            if len(coords) >= 2:
-                normalized["longitude"] = float(coords[0])
-                normalized["latitude"] = float(coords[1])
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-            normalized["confidence"] = self._calculate_confidence(
-                normalized,
-                feature=feature,
-                importance_key="relevance",
-            )
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None
+    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
+        """Get address by reference (latitude-longitude) using reverse geocoding."""
+        return self.get_address_by_reference_latlon(reference, raw=raw)

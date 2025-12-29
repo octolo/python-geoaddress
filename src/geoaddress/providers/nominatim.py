@@ -3,8 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import requests
-
 from . import GeoaddressProvider
 
 
@@ -127,6 +125,8 @@ class NominatimProvider(GeoaddressProvider):
                 addresses.append(normalized)
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except Exception:
             return []
 
@@ -171,6 +171,8 @@ class NominatimProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except Exception:
             return None
 
@@ -250,6 +252,8 @@ class NominatimProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except Exception:
             return None
 
@@ -326,6 +330,8 @@ class NominatimProvider(GeoaddressProvider):
                     addresses.append(normalized)
 
                 return addresses
+            except requests.exceptions.Timeout:
+                raise requests.exceptions.Timeout("Request timeout after 10 seconds")
             except Exception:
                 return []
         else:
@@ -375,5 +381,7 @@ class NominatimProvider(GeoaddressProvider):
                     addresses.append(normalized)
 
                 return addresses
+            except requests.exceptions.Timeout:
+                raise requests.exceptions.Timeout("Request timeout after 10 seconds")
             except Exception:
                 return []

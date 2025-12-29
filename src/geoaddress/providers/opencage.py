@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-
 from . import GeoaddressProvider
 
 
@@ -58,8 +57,12 @@ class OpencageProvider(GeoaddressProvider):
 
         address_type = components.get("_type", "")
 
-        geohash = result.get("annotations", {}).get("geohash", "")
-        reference = str(geohash) if geohash else None
+        geometry = result.get("geometry", {})
+        reference = None
+        lat_val = geometry.get("lat")
+        lon_val = geometry.get("lng")
+        if lat_val is not None and lon_val is not None:
+            reference = f"{float(lat_val)}-{float(lon_val)}"
 
         return {
             "address_line1": address_line1 or "",
@@ -137,12 +140,15 @@ class OpencageProvider(GeoaddressProvider):
                     if lon_val is not None:
                         normalized["longitude"] = float(lon_val)
 
+                    if lat_val is not None and lon_val is not None:
+                        normalized["reference"] = f"{float(lat_val)}-{float(lon_val)}"
+
                     normalized["backend"] = self.display_name
                     normalized["backend_name"] = self.name
                     normalized["text"] = self._build_address_string(normalized)
 
                     confidence_value = item.get("confidence", 0)
-                    normalized["confidence"] = float(confidence_value) / 100.0 if confidence_value else 0.0
+                    normalized["confidence"] = float(confidence_value) if confidence_value else 0.0
                     normalized["relevance"] = self._calculate_relevance(
                         {"address_line1": query},
                         normalized,
@@ -154,6 +160,8 @@ class OpencageProvider(GeoaddressProvider):
                     continue
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -208,17 +216,20 @@ class OpencageProvider(GeoaddressProvider):
 
             normalized["latitude"] = latitude
             normalized["longitude"] = longitude
+            normalized["reference"] = f"{latitude}-{longitude}"
 
             normalized["backend"] = self.display_name
             normalized["backend_name"] = self.name
             normalized["text"] = self._build_address_string(normalized)
 
             confidence_value = item.get("confidence", 0)
-            normalized["confidence"] = float(confidence_value) / 100.0 if confidence_value else 0.0
+            normalized["confidence"] = float(confidence_value) if confidence_value else 0.0
             normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -227,3 +238,8 @@ class OpencageProvider(GeoaddressProvider):
             if raw:
                 return {"error": str(e)}
             return None
+
+    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
+        """Get address by reference (latitude-longitude) using reverse geocoding."""
+        return self.get_address_by_reference_latlon(reference, raw=raw)
+

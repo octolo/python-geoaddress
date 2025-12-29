@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-
 from . import GeoaddressProvider
 
 
@@ -163,12 +162,12 @@ class GoogleMapsProvider(GeoaddressProvider):
 
                     location_type = geometry.get("location_type", "")
                     confidence_map = {
-                        "ROOFTOP": 1.0,
-                        "RANGE_INTERPOLATED": 0.9,
-                        "GEOMETRIC_CENTER": 0.7,
-                        "APPROXIMATE": 0.5,
+                        "ROOFTOP": 100.0,
+                        "RANGE_INTERPOLATED": 90.0,
+                        "GEOMETRIC_CENTER": 70.0,
+                        "APPROXIMATE": 50.0,
                     }
-                    normalized["confidence"] = confidence_map.get(location_type, 0.5)
+                    normalized["confidence"] = confidence_map.get(location_type, 50.0)
                     normalized["relevance"] = self._calculate_relevance(
                         {"address_line1": query},
                         normalized,
@@ -180,6 +179,8 @@ class GoogleMapsProvider(GeoaddressProvider):
                     continue
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -244,16 +245,18 @@ class GoogleMapsProvider(GeoaddressProvider):
             geometry = item.get("geometry", {})
             location_type = geometry.get("location_type", "")
             confidence_map = {
-                "ROOFTOP": 1.0,
-                "RANGE_INTERPOLATED": 0.9,
-                "GEOMETRIC_CENTER": 0.7,
-                "APPROXIMATE": 0.5,
+                "ROOFTOP": 100.0,
+                "RANGE_INTERPOLATED": 90.0,
+                "GEOMETRIC_CENTER": 70.0,
+                "APPROXIMATE": 50.0,
             }
-            normalized["confidence"] = confidence_map.get(location_type, 0.5)
+            normalized["confidence"] = confidence_map.get(location_type, 50.0)
             normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -324,16 +327,18 @@ class GoogleMapsProvider(GeoaddressProvider):
 
             location_type = geometry.get("location_type", "")
             confidence_map = {
-                "ROOFTOP": 1.0,
-                "RANGE_INTERPOLATED": 0.9,
-                "GEOMETRIC_CENTER": 0.7,
-                "APPROXIMATE": 0.5,
+                "ROOFTOP": 100.0,
+                "RANGE_INTERPOLATED": 90.0,
+                "GEOMETRIC_CENTER": 70.0,
+                "APPROXIMATE": 50.0,
             }
-            normalized["confidence"] = confidence_map.get(location_type, 0.5)
+            normalized["confidence"] = confidence_map.get(location_type, 50.0)
             normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}

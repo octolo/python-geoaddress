@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-
 from . import GeoaddressProvider
 
 
@@ -28,7 +27,7 @@ class LocationIQProvider(GeoaddressProvider):
         self._last_request_time = 0.0
 
     _field_mapping: dict[str, Any] = {
-        "reference": lambda r: str(r.get("place_id")) if r.get("place_id") else None,
+        "reference": lambda r: f"{float(r['lat'])}-{float(r['lon'])}" if r.get("lat") is not None and r.get("lon") is not None else None,
         "address_line1": lambda r: (
             f"{r.get('address', {}).get('house_number', '')} {r.get('address', {}).get('road', '')}".strip()
             if r.get("address", {}).get("house_number") and r.get("address", {}).get("road")
@@ -132,6 +131,8 @@ class LocationIQProvider(GeoaddressProvider):
                 addresses.append(normalized)
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -189,6 +190,8 @@ class LocationIQProvider(GeoaddressProvider):
             normalized = self._order_normalized_fields(normalized)
 
             return normalized
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
@@ -269,6 +272,8 @@ class LocationIQProvider(GeoaddressProvider):
                 addresses.append(normalized)
 
             return addresses
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
@@ -277,3 +282,8 @@ class LocationIQProvider(GeoaddressProvider):
             if raw:
                 return [{"error": str(e)}]
             return []
+
+    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
+        """Get address by reference (latitude-longitude) using reverse geocoding."""
+        return self.get_address_by_reference_latlon(reference, raw=raw)
+
