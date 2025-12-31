@@ -43,6 +43,7 @@ class NominatimProvider(GeoaddressProvider):
             or ""
         ),
         "postal_code": "address.postcode",
+        "county": "address.county",
         "state": lambda r: r.get("address", {}).get("state") or r.get("address", {}).get("province") or "",
         "region": "address.region",
         "country_code": lambda r: (r.get("address", {}).get("country_code", "") or "").upper(),

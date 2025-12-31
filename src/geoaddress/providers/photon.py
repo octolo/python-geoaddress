@@ -42,6 +42,7 @@ class PhotonProvider(GeoaddressProvider):
 
         city = properties.get("city") or properties.get("town") or properties.get("village") or ""
         postal_code = properties.get("postcode", "")
+        county = properties.get("county", "")
         state = properties.get("state", "")
         region = properties.get("region", "")
         country_code = properties.get("countrycode", "").upper()
@@ -87,6 +88,7 @@ class PhotonProvider(GeoaddressProvider):
             "address_line3": "",
             "city": city,
             "postal_code": postal_code,
+            "county": county,
             "state": state,
             "region": region,
             "country_code": country_code,

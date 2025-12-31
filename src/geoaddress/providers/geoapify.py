@@ -86,6 +86,7 @@ class GeoapifyProvider(GeoaddressProvider):
             "address_line3": "",
             "city": city,
             "postal_code": properties.get("postcode", ""),
+            "county": properties.get("county", ""),
             "state": state,
             "region": region,
             "country_code": (

@@ -73,6 +73,7 @@ class GeocodeEarthProvider(GeoaddressProvider):
             "address_line3": "",
             "city": city,
             "postal_code": properties.get("postalcode", ""),
+            "county": properties.get("county", ""),
             "state": state,
             "region": region,
             "country_code": (
@@ -168,11 +169,11 @@ class GeocodeEarthProvider(GeoaddressProvider):
         except requests.exceptions.RequestException as e:
             if raw:
                 return [{"error": str(e)}]
-            return []
+            raise
         except Exception as e:
             if raw:
                 return [{"error": str(e)}]
-            return []
+            raise
 
     def reverse_geocode(self, latitude: float, longitude: float, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
 
@@ -238,11 +239,11 @@ class GeocodeEarthProvider(GeoaddressProvider):
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
-            return None
+            raise
         except Exception as e:
             if raw:
                 return {"error": str(e)}
-            return None
+            raise
 
     def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
 
@@ -309,8 +310,8 @@ class GeocodeEarthProvider(GeoaddressProvider):
         except requests.exceptions.RequestException as e:
             if raw:
                 return {"error": str(e)}
-            return None
+            raise
         except Exception as e:
             if raw:
                 return {"error": str(e)}
-            return None
+            raise

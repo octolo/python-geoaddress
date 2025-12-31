@@ -42,6 +42,7 @@ class LocationIQProvider(GeoaddressProvider):
             or ""
         ),
         "postal_code": "address.postcode",
+        "county": "address.county",
         "state": lambda r: r.get("address", {}).get("state") or "",
         "region": "address.region",
         "country_code": lambda r: (r.get("address", {}).get("country_code", "") or "").upper(),

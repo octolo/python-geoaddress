@@ -34,6 +34,7 @@ class GoogleMapsProvider(GeoaddressProvider):
         postal_code = ""
         state = ""
         region = ""
+        county = ""
         municipality = ""
         neighbourhood = ""
         country_code = ""
@@ -59,6 +60,7 @@ class GoogleMapsProvider(GeoaddressProvider):
             elif "administrative_area_level_1" in types:
                 state = long_name
             elif "administrative_area_level_2" in types:
+                county = long_name
                 region = long_name
             elif "administrative_area_level_3" in types or "sublocality_level_1" in types:
                 municipality = municipality if municipality else long_name
@@ -85,6 +87,7 @@ class GoogleMapsProvider(GeoaddressProvider):
             "address_line3": "",
             "city": city,
             "postal_code": postal_code,
+            "county": county,
             "state": state,
             "region": region,
             "country_code": country_code,

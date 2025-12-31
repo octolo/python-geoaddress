@@ -79,6 +79,7 @@ def search_addresses(
     providers_args.update(kwargs)
 
     if first:
+        print("here 2", first)
         return try_providers_first(**providers_args)
     return try_providers(**providers_args)
 

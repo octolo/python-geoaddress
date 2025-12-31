@@ -60,7 +60,7 @@ class MapboxProvider(GeoaddressProvider):
 
         city = self._extract_context_value(context, "place")
         postal_code = self._extract_context_value(context, "postcode")
-
+        county = self._extract_context_value(context, "county")
         state = ""
         region = ""
         for item in context:
@@ -100,6 +100,7 @@ class MapboxProvider(GeoaddressProvider):
             "address_line3": "",
             "city": city,
             "postal_code": postal_code,
+            "county": county,
             "state": state,
             "region": region,
             "country_code": country_code,

@@ -241,7 +241,9 @@ class GeoaddressProvider(ProviderBase):
                 normalized.get("address_line3"),
                 normalized.get("city"),
                 normalized.get("postal_code"),
+                normalized.get("county"),
                 normalized.get("state"),
+                normalized.get("region"),
                 normalized.get("country_code"),
             )
             if part

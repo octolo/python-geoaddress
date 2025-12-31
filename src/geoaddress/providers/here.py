@@ -41,7 +41,8 @@ class HereProvider(GeoaddressProvider):
         city = address.get("City", "")
         postal_code = address.get("PostalCode", "")
         state = address.get("State", "")
-        region = address.get("County", "") or address.get("Region", "")
+        county = address.get("County", "")
+        region = address.get("Region", "") or (county if not address.get("Region", "") else "")
         country_code = address.get("Country", "").upper()
         country = address.get("Country", "")
 
@@ -56,6 +57,7 @@ class HereProvider(GeoaddressProvider):
             "address_line3": "",
             "city": city,
             "postal_code": postal_code,
+            "county": county,
             "state": state,
             "region": region,
             "country_code": country_code,
