@@ -15,6 +15,9 @@ class GoogleMapsProvider(GeoaddressProvider):
     site_url = "https://developers.google.com/maps"
     config_keys = ["GOOGLE_MAPS_API_KEY"]
     config_required = ["GOOGLE_MAPS_API_KEY"]
+    cost_search_addresses = 0.005
+    cost_reverse_geocode = 0.005
+    cost_get_address_by_reference = 0.005
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Google Maps provider."""

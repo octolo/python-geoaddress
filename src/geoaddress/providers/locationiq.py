@@ -18,6 +18,10 @@ class LocationIQProvider(GeoaddressProvider):
         "LOCATIONIQ_BASE_URL": "https://api.locationiq.com/v1",
     }
     config_required = ["LOCATIONIQ_API_KEY"]
+    cost_search_addresses = 0.00013
+    cost_reverse_geocode = 0.00013
+    cost_get_address_by_reference = 0.00013
+    cost_get_address_by_osm = 0.00013
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize LocationIQ provider."""

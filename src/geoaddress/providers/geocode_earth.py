@@ -18,6 +18,9 @@ class GeocodeEarthProvider(GeoaddressProvider):
         "GEOCODE_EARTH_BASE_URL": "https://api.geocode.earth/v1",
     }
     config_required = ["GEOCODE_EARTH_API_KEY"]
+    cost_search_addresses = 0.00015
+    cost_reverse_geocode = 0.00015
+    cost_get_address_by_reference = 0.00015
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Geocode Earth provider."""

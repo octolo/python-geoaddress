@@ -303,18 +303,6 @@ class GeoaddressProvider(ProviderBase):
             return None
         return f"{backend_name}-{reference}"
 
-    def get_address_by_osm(self, _osm_keys_value: dict[str, Any], _raw: bool = False) -> list[dict[str, Any]] | None:  # noqa: C901
-        """Get address by OSM key-value pairs.
-
-        Args:
-            osm_keys_value: Dictionary of OSM key-value pairs (e.g., {"place": "city", "name": "Paris"}).
-            raw: If True, return raw provider response.
-
-        Returns:
-            List of normalized addresses or None if not implemented or error.
-        """
-        return None
-
     def get_address_by_reference_latlon(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
         """Get address by reference (latitude-longitude) using reverse geocoding.
 

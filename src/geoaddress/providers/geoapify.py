@@ -18,6 +18,9 @@ class GeoapifyProvider(GeoaddressProvider):
         "GEOAPIFY_BASE_URL": "https://api.geoapify.com/v1",
     }
     config_required = ["GEOAPIFY_API_KEY"]
+    cost_search_addresses = 0.0002
+    cost_reverse_geocode = 0.0002
+    cost_get_address_by_reference = 0.0002
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Geoapify provider."""

@@ -18,6 +18,9 @@ class OpencageProvider(GeoaddressProvider):
         "OPENCAGE_BASE_URL": "https://api.opencagedata.com/geocode/v1",
     }
     config_required = ["OPENCAGE_API_KEY"]
+    cost_search_addresses = 0.00017
+    cost_reverse_geocode = 0.00017
+    cost_get_address_by_reference = 0.00017
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize OpenCage provider."""

@@ -16,6 +16,9 @@ class MapboxProvider(GeoaddressProvider):
     site_url = "https://www.mapbox.com"
     config_keys = ["MAPBOX_ACCESS_TOKEN"]
     config_required = ["MAPBOX_ACCESS_TOKEN"]
+    cost_search_addresses = 0.0005
+    cost_reverse_geocode = 0.0005
+    cost_get_address_by_reference = 0.0005
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Mapbox provider."""

@@ -15,6 +15,9 @@ class HereProvider(GeoaddressProvider):
     site_url = "https://developer.here.com"
     config_keys = ["HERE_APP_ID", "HERE_APP_CODE"]
     config_required = ["HERE_APP_ID", "HERE_APP_CODE"]
+    cost_search_addresses = 0.001
+    cost_reverse_geocode = 0.001
+    cost_get_address_by_reference = 0.001
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Here provider."""
