@@ -19,6 +19,7 @@ class PhotonProvider(GeoaddressProvider):
         "PHOTON_USER_AGENT": "python-geoaddress/1.0",
     }
     config_required = []
+    priority = 5
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Photon provider."""
