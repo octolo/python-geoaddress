@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, Any
 
-from providerkit.cli import _get_package_name  # noqa: TID252
+from qualitybase.cli import _get_package_name  # noqa: TID252
 from providerkit.helpers import try_providers, try_providers_first  # noqa: TID252
 from qualitybase.commands.base import Command
 
