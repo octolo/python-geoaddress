@@ -1,6 +1,6 @@
 """lib example - Example Python library with src/ structure."""
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 
 GEOADDRESS_FIELDS_ESSENTIALS = {
