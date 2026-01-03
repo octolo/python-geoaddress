@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geoaddress"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python library for address geocoding and reverse geocoding. Provides a unified interface to multiple geocoding providers (Nominatim, Google Maps, Mapbox, etc.) using ProviderKit for provider management."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -74,6 +74,7 @@ test = [
 
 [tool.setuptools]
 license-files = ["LICENSE"]
+package-data = {geoaddress = [".commands.json"]}
 
 [tool.setuptools.packages.find]
 where = ["src"]
