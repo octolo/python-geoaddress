@@ -13,8 +13,8 @@ class HereProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://developer.here.com/documentation/geocoding-search-api"
     site_url = "https://developer.here.com"
-    config_keys = ["HERE_APP_ID", "HERE_APP_CODE"]
-    config_required = ["HERE_APP_ID", "HERE_APP_CODE"]
+    config_keys = ["APP_ID", "APP_CODE"]
+    config_required = ["APP_ID", "APP_CODE"]
     cost_search_addresses = 0.001
     cost_reverse_geocode = 0.001
     cost_get_address_by_reference = 0.001
@@ -23,8 +23,8 @@ class HereProvider(GeoaddressProvider):
         """Initialize Here provider."""
         super().__init__(**kwargs)
         self._base_url = "https://geocoder.api.here.com/6.2"
-        self._app_id = self._get_config_or_env("HERE_APP_ID")
-        self._app_code = self._get_config_or_env("HERE_APP_CODE")
+        self._app_id = self._get_config_or_env("APP_ID")
+        self._app_code = self._get_config_or_env("APP_CODE")
         self._last_request_time = 0.0
 
     def _extract_address_from_result(self, result: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
@@ -71,9 +71,10 @@ class HereProvider(GeoaddressProvider):
             "reference": str(location_id) if location_id else None,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Here."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._app_id or not self._app_code:
             if raw:
                 return [{"error": "HERE_APP_ID and HERE_APP_CODE must be configured"}]

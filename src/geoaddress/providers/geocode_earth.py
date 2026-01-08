@@ -13,11 +13,11 @@ class GeocodeEarthProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://geocode.earth/docs"
     site_url = "https://geocode.earth"
-    config_keys = ["GEOCODE_EARTH_API_KEY", "GEOCODE_EARTH_BASE_URL"]
+    config_keys = ["API_KEY", "BASE_URL"]
     config_defaults = {
-        "GEOCODE_EARTH_BASE_URL": "https://api.geocode.earth/v1",
+        "BASE_URL": "https://api.geocode.earth/v1",
     }
-    config_required = ["GEOCODE_EARTH_API_KEY"]
+    config_required = ["API_KEY"]
     cost_search_addresses = 0.00015
     cost_reverse_geocode = 0.00015
     cost_get_address_by_reference = 0.00015
@@ -25,8 +25,8 @@ class GeocodeEarthProvider(GeoaddressProvider):
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Geocode Earth provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("GEOCODE_EARTH_BASE_URL", "https://api.geocode.earth/v1")
-        api_key = self._get_config_or_env("GEOCODE_EARTH_API_KEY")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://api.geocode.earth/v1")
+        api_key = self._get_config_or_env("API_KEY")
         self._api_key = api_key.strip() if api_key else None
         self._last_request_time = 0.0
 
@@ -89,9 +89,10 @@ class GeocodeEarthProvider(GeoaddressProvider):
             "reference": str(reference) if reference is not None else None,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Geocode Earth."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             if raw:
                 return [{"error": "GEOCODE_EARTH_API_KEY not configured"}]

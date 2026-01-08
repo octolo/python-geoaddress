@@ -13,11 +13,11 @@ class LocationIQProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://docs.locationiq.com/"
     site_url = "https://locationiq.com"
-    config_keys = ["LOCATIONIQ_API_KEY", "LOCATIONIQ_BASE_URL"]
+    config_keys = ["API_KEY", "BASE_URL"]
     config_defaults = {
-        "LOCATIONIQ_BASE_URL": "https://api.locationiq.com/v1",
+        "BASE_URL": "https://api.locationiq.com/v1",
     }
-    config_required = ["LOCATIONIQ_API_KEY"]
+    config_required = ["API_KEY"]
     cost_search_addresses = 0.00013
     cost_reverse_geocode = 0.00013
     cost_get_address_by_reference = 0.00013
@@ -26,8 +26,8 @@ class LocationIQProvider(GeoaddressProvider):
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize LocationIQ provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("LOCATIONIQ_BASE_URL", "https://api.locationiq.com/v1")
-        self._api_key = self._get_config_or_env("LOCATIONIQ_API_KEY")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://api.locationiq.com/v1")
+        self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
 
     _field_mapping: dict[str, Any] = {
@@ -73,9 +73,10 @@ class LocationIQProvider(GeoaddressProvider):
         "osm_type": lambda r: r.get("osm_type", "").upper() if r.get("osm_type") else None,
     }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using LocationIQ."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             if raw:
                 return [{"error": "LOCATIONIQ_API_KEY not configured"}]

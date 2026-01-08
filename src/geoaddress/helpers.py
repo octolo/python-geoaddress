@@ -1,87 +1,52 @@
 from pathlib import Path
 from typing import Any
 
-from providerkit.helpers import get_providers, try_providers, try_providers_first
+from providerkit.helpers import get_providerkit, get_providers, call_providers
+from .providers import GeoaddressProvider
 
-
-def get_address_providers(
-    *,
-    json: str | Path | None = None,
-    lib_name: str = "geoaddress",
-    config: list[dict[str, Any]] | None = None,
-    dir_path: str | Path | None = None,
-    base_module: str | None = None,
-    query_string: str | None = None,
-    search_fields: list[str] | None = None,
-    attribute_search: dict[str, str] | None = None,
-    format: str | None = None,
-) -> dict[str, Any] | str:
+def get_address_providers(*args: Any, **kwargs: Any) -> dict[str, Any] | str:
     """Get address providers."""
-    providers = get_providers(  # type: ignore[no-any-return]
-        json=json,
-        lib_name=lib_name,
-        config=config,
-        dir_path=dir_path,
-        base_module=base_module,
-        query_string=query_string,
-        search_fields=search_fields,
-        attribute_search=attribute_search,
-        format=format,
-    )
-    if not len(providers):
+    lib_name = kwargs.pop('lib_name', 'geoaddress')
+    return get_providers(lib_name=lib_name, *args, **kwargs)
+
+
+def get_address_provider(attribute_search: dict[str, Any], *args: Any, **kwargs: Any) -> GeoaddressProvider:
+    """Get address provider by attribute search."""
+    lib_name = kwargs.pop('lib_name', 'geoaddress')
+    providers = get_providers(lib_name=lib_name, attribute_search=attribute_search, format="python", *args, **kwargs)
+    if not providers:
         raise ValueError("No providers found")
-    return providers  # type: ignore[no-any-return]
-
-
-def get_address_provider(
-    name: str,
-) -> Any:
-    """Get address provider."""
-    providers = get_providers(  # type: ignore[no-any-return]
-        lib_name="geoaddress",
-        attribute_search={"name": name},
-        format="python",
-    )
     if len(providers) > 1:
         raise ValueError(f"Expected 1 provider, got {len(providers)}")
-    return providers[0]
+    return providers[0]  # type: ignore[no-any-return]
 
 
-def search_addresses(
-    query: str,
-    first: bool = False,
-    providers: dict[str, Any] | None = None,
-    json: str | Path | None = None,
-    lib_name: str = "geoaddress",
-    config: list[dict[str, Any]] | None = None,
-    dir_path: str | Path | None = None,
-    base_module: str | None = None,
-    query_string: str | None = None,
-    search_fields: list[str] | None = None,
-    parallel: bool = False,
-    **kwargs: Any,
-) -> Any:
+def search_addresses(query: str, *args: Any, **kwargs: Any) -> Any:
     """Search addresses using providers."""
-    if "additional_args" not in kwargs:
-        kwargs["additional_args"] = {}
-    kwargs["additional_args"]["query"] = query
+    additional_args = kwargs.get("additional_args", {})
+    results = call_providers(command="search_addresses", query=query, lib_name="geoaddress", **additional_args)
+    print(results)
+    return "test"
 
-    providers_args = {
-        "command": "search_addresses",
-        "json": json,
-        "lib_name": lib_name,
-        "config": config,
-        "dir_path": dir_path,
-        "base_module": base_module,
-        "query_string": query_string,
-        "search_fields": search_fields,
-    }
-    providers_args.update(kwargs)
-
-    if first:
-        print("here 2", first)
-        return try_providers_first(**providers_args)
-    return try_providers(**providers_args)
+    #results = pvk.get_service_result("search_addresses")
+    #if not results:
+    #    return None
+#
+    #if first and results:
+    #    provider_result = results[0]
+    #    if "error" in provider_result:
+    #        raise RuntimeError(provider_result["error"])
+    #    provider = provider_result["provider"]
+    #    return provider.call_service("search_addresses", query=query, **additional_args)
+#
+    #all_results = []
+    #for provider_result in results:
+    #    if "error" in provider_result:
+    #        continue
+    #    provider = provider_result["provider"]
+    #    result = provider.call_service("search_addresses", query=query, **additional_args)
+    #    all_results.append(result)
+    #return all_results
 
 
 def get_address_by_reference(  # noqa: ARG001
@@ -98,11 +63,10 @@ def get_address_by_reference(  # noqa: ARG001
     **kwargs: Any,
 ) -> Any:
     """Get address by reference using providers."""
-    if "additional_args" not in kwargs:
-        kwargs["additional_args"] = {}
-    kwargs["additional_args"]["reference"] = reference
+    additional_args = kwargs.get("additional_args", {})
+    additional_args["reference"] = reference
+
     providers_args = {
-        "command": "get_address_by_reference",
         "json": json,
         "lib_name": lib_name,
         "config": config,
@@ -111,8 +75,27 @@ def get_address_by_reference(  # noqa: ARG001
         "query_string": query_string,
         "search_fields": search_fields,
     }
-    providers_args.update(kwargs)
+    providers_args.update({k: v for k, v in kwargs.items() if k != "additional_args"})
 
-    if first:
-        return try_providers_first(**providers_args)
-    return try_providers(**providers_args)
+    pvk = get_providerkit(**providers_args)
+    pvk.execute_providers("get_address_by_reference", first=first, lib_name=lib_name, **providers_args, **additional_args)
+
+    results = pvk.get_service_result("get_address_by_reference")
+    if not results:
+        return None
+
+    if first and results:
+        provider_result = results[0]
+        if "error" in provider_result:
+            raise RuntimeError(provider_result["error"])
+        provider = provider_result["provider"]
+        return provider.call_service("get_address_by_reference", reference=reference, **additional_args)
+
+    all_results = []
+    for provider_result in results:
+        if "error" in provider_result:
+            continue
+        provider = provider_result["provider"]
+        result = provider.call_service("get_address_by_reference", reference=reference, **additional_args)
+        all_results.append(result)
+    return all_results

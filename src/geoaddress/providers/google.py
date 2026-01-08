@@ -13,8 +13,8 @@ class GoogleMapsProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://developers.google.com/maps/documentation/geocoding"
     site_url = "https://developers.google.com/maps"
-    config_keys = ["GOOGLE_MAPS_API_KEY"]
-    config_required = ["GOOGLE_MAPS_API_KEY"]
+    config_keys = ["API_KEY"]
+    config_required = ["API_KEY"]
     cost_search_addresses = 0.005
     cost_reverse_geocode = 0.005
     cost_get_address_by_reference = 0.005
@@ -23,7 +23,7 @@ class GoogleMapsProvider(GeoaddressProvider):
         """Initialize Google Maps provider."""
         super().__init__(**kwargs)
         self._base_url = "https://maps.googleapis.com/maps/api"
-        self._api_key = self._get_config_or_env("GOOGLE_MAPS_API_KEY")
+        self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
 
     def _extract_address_from_result(self, result: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
@@ -101,9 +101,10 @@ class GoogleMapsProvider(GeoaddressProvider):
             "reference": str(place_id) if place_id else None,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Google Maps."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             if raw:
                 return [{"error": "GOOGLE_MAPS_API_KEY not configured"}]

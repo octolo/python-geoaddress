@@ -13,17 +13,17 @@ class MapsCoProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://geocode.maps.co/docs/"
     site_url = "https://geocode.maps.co"
-    config_keys = ["MAPS_CO_API_KEY", "MAPS_CO_BASE_URL"]
+    config_keys = ["API_KEY", "BASE_URL"]
     config_defaults = {
-        "MAPS_CO_BASE_URL": "https://geocode.maps.co",
+        "BASE_URL": "https://geocode.maps.co",
     }
-    config_required = ["MAPS_CO_API_KEY"]
+    config_required = ["API_KEY"]
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Maps.co provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("MAPS_CO_BASE_URL", "https://geocode.maps.co")
-        self._api_key = self._get_config_or_env("MAPS_CO_API_KEY")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://geocode.maps.co")
+        self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
 
     _field_mapping: dict[str, Any] = {
@@ -71,9 +71,10 @@ class MapsCoProvider(GeoaddressProvider):
         "osm_type": lambda r: r.get("osm_type", "").upper() if r.get("osm_type") else None,
     }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Maps.co."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             if raw:
                 return [{"error": "MAPS_CO_API_KEY not configured"}]

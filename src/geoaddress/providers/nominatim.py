@@ -13,18 +13,18 @@ class NominatimProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://nominatim.org/release-docs/develop/api/Overview/"
     site_url = "https://nominatim.org"
-    config_keys = ["NOMINATIM_BASE_URL", "NOMINATIM_USER_AGENT"]
+    config_keys = ["BASE_URL", "USER_AGENT"]
     config_defaults = {
-        "NOMINATIM_BASE_URL": "https://nominatim.openstreetmap.org",
-        "NOMINATIM_USER_AGENT": "python-geoaddress/1.0",
+        "BASE_URL": "https://nominatim.openstreetmap.org",
+        "USER_AGENT": "python-geoaddress/1.0",
     }
-    config_required = ["NOMINATIM_USER_AGENT"]
+    config_required = ["USER_AGENT"]
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Nominatim provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("NOMINATIM_BASE_URL", "https://nominatim.openstreetmap.org")
-        self._user_agent = self._get_config_or_env("NOMINATIM_USER_AGENT", "python-geoaddress/1.0")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://nominatim.openstreetmap.org")
+        self._user_agent = self._get_config_or_env("USER_AGENT", "python-geoaddress/1.0")
         self._last_request_time = 0.0
 
     _field_mapping: dict[str, Any] = {
@@ -72,9 +72,10 @@ class NominatimProvider(GeoaddressProvider):
         "osm_type": lambda r: r.get("osm_type", "").upper() if r.get("osm_type") else None,
     }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Nominatim."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
         if time_since_last < 1.0:

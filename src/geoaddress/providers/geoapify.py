@@ -13,11 +13,11 @@ class GeoapifyProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://apidocs.geoapify.com/docs/geocoding/"
     site_url = "https://www.geoapify.com"
-    config_keys = ["GEOAPIFY_API_KEY", "GEOAPIFY_BASE_URL"]
+    config_keys = ["API_KEY", "BASE_URL"]
     config_defaults = {
-        "GEOAPIFY_BASE_URL": "https://api.geoapify.com/v1",
+        "BASE_URL": "https://api.geoapify.com/v1",
     }
-    config_required = ["GEOAPIFY_API_KEY"]
+    config_required = ["API_KEY"]
     cost_search_addresses = 0.0002
     cost_reverse_geocode = 0.0002
     cost_get_address_by_reference = 0.0002
@@ -25,8 +25,8 @@ class GeoapifyProvider(GeoaddressProvider):
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Geoapify provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("GEOAPIFY_BASE_URL", "https://api.geoapify.com/v1")
-        self._api_key = self._get_config_or_env("GEOAPIFY_API_KEY")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://api.geoapify.com/v1")
+        self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
 
     def _extract_address_from_feature(self, feature: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
@@ -102,12 +102,13 @@ class GeoapifyProvider(GeoaddressProvider):
             "reference": str(reference) if reference is not None else None,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Geoapify."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             if raw:
-                return [{"error": "GEOAPIFY_API_KEY not configured"}]
+                return [{"error": "API_KEY not configured"}]
             return []
 
         current_time = time.time()
@@ -201,7 +202,7 @@ class GeoapifyProvider(GeoaddressProvider):
         """Reverse geocode coordinates to an address using Geoapify."""
         if not self._api_key:
             if raw:
-                return {"error": "GEOAPIFY_API_KEY not configured"}
+                return {"error": "API_KEY not configured"}
             return None
 
         current_time = time.time()

@@ -14,8 +14,8 @@ class MapboxProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://docs.mapbox.com/api/search/geocoding/"
     site_url = "https://www.mapbox.com"
-    config_keys = ["MAPBOX_ACCESS_TOKEN"]
-    config_required = ["MAPBOX_ACCESS_TOKEN"]
+    config_keys = ["ACCESS_TOKEN"]
+    config_required = ["ACCESS_TOKEN"]
     cost_search_addresses = 0.0005
     cost_reverse_geocode = 0.0005
     cost_get_address_by_reference = 0.0005
@@ -24,7 +24,7 @@ class MapboxProvider(GeoaddressProvider):
         """Initialize Mapbox provider."""
         super().__init__(**kwargs)
         self._base_url = "https://api.mapbox.com"
-        self._access_token = self._get_config_or_env("MAPBOX_ACCESS_TOKEN")
+        self._access_token = self._get_config_or_env("ACCESS_TOKEN")
         self._last_request_time = 0.0
 
     def _extract_context_value(self, context: list[dict[str, Any]], prefix: str) -> str:
@@ -114,9 +114,10 @@ class MapboxProvider(GeoaddressProvider):
             "reference": reference,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Mapbox."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._access_token:
             if raw:
                 return [{"error": "MAPBOX_ACCESS_TOKEN not configured"}]

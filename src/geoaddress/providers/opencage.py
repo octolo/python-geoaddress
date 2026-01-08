@@ -13,11 +13,11 @@ class OpencageProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://opencagedata.com/api"
     site_url = "https://opencagedata.com"
-    config_keys = ["OPENCAGE_API_KEY", "OPENCAGE_BASE_URL"]
+    config_keys = ["API_KEY", "BASE_URL"]
     config_defaults = {
-        "OPENCAGE_BASE_URL": "https://api.opencagedata.com/geocode/v1",
+        "BASE_URL": "https://api.opencagedata.com/geocode/v1",
     }
-    config_required = ["OPENCAGE_API_KEY"]
+    config_required = ["API_KEY"]
     cost_search_addresses = 0.00017
     cost_reverse_geocode = 0.00017
     cost_get_address_by_reference = 0.00017
@@ -25,8 +25,8 @@ class OpencageProvider(GeoaddressProvider):
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize OpenCage provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("OPENCAGE_BASE_URL", "https://api.opencagedata.com/geocode/v1")
-        self._api_key = self._get_config_or_env("OPENCAGE_API_KEY")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://api.opencagedata.com/geocode/v1")
+        self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
 
     def _extract_address_from_result(self, result: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
@@ -85,9 +85,10 @@ class OpencageProvider(GeoaddressProvider):
             "reference": reference,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using OpenCage."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             if raw:
                 return [{"error": "OPENCAGE_API_KEY not configured"}]

@@ -25,7 +25,14 @@ class GeoaddressProvider(ProviderBase):
     config_defaults: dict[str, Any] = {}
     config_required: list[str] = []
     config_prefix = "GEOADDRESS"
-    services = ["search_addresses", "get_address_by_reference", "reverse_geocode", "get_address_by_osm"]
+    services_cfg = {
+        "search_addresses": {
+            "label": "Search addresses",
+            "description": "Search addresses",
+            "format": "str",
+            "fields": GEOADDRESS_FIELDS_DESCRIPTIONS
+        },
+    }
 
     @staticmethod
     def _round_score(score: float, decimals: int = 2) -> float:

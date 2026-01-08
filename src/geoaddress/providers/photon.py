@@ -13,10 +13,10 @@ class PhotonProvider(GeoaddressProvider):
     required_packages = ["requests"]
     documentation_url = "https://photon.komoot.io/docs"
     site_url = "https://photon.komoot.io"
-    config_keys = ["PHOTON_BASE_URL", "PHOTON_USER_AGENT"]
+    config_keys = ["BASE_URL", "USER_AGENT"]
     config_defaults = {
-        "PHOTON_BASE_URL": "https://photon.komoot.io",
-        "PHOTON_USER_AGENT": "python-geoaddress/1.0",
+        "BASE_URL": "https://photon.komoot.io",
+        "USER_AGENT": "python-geoaddress/1.0",
     }
     config_required = []
     priority = 5
@@ -24,8 +24,8 @@ class PhotonProvider(GeoaddressProvider):
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Photon provider."""
         super().__init__(**kwargs)
-        self._base_url = self._get_config_or_env("PHOTON_BASE_URL", "https://photon.komoot.io")
-        self._user_agent = self._get_config_or_env("PHOTON_USER_AGENT", "python-geoaddress/1.0")
+        self._base_url = self._get_config_or_env("BASE_URL", "https://photon.komoot.io")
+        self._user_agent = self._get_config_or_env("USER_AGENT", "python-geoaddress/1.0")
         self._last_request_time = 0.0
 
     def _extract_address_from_feature(self, feature: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
@@ -102,9 +102,10 @@ class PhotonProvider(GeoaddressProvider):
             "osm_type": osm_type if osm_type else None,
         }
 
-    def search_addresses(self, query: str, raw: bool = False, proximity: str | None = None) -> list[dict[str, Any]]:  # noqa: C901
-
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Photon."""
+        raw = kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
         if time_since_last < 0.1:
