@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from providerkit import ProviderBase
 
-from geoaddress import GEOADDRESS_FIELDS_DESCRIPTIONS
+from geoaddress import GEOADDRESS_FIELDS_DESCRIPTIONS, GEOADDRESS_FIELDS_FORMATS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,7 +32,97 @@ class GeoaddressProvider(ProviderBase):
             "format": "str",
             "fields": GEOADDRESS_FIELDS_DESCRIPTIONS
         },
+        "reverse_geocode": {
+            "label": "Reverse geocode",
+            "description": "Reverse geocode",
+            "format": "str",
+            "fields": GEOADDRESS_FIELDS_DESCRIPTIONS
+        },
     }
+    geoaddress_timeout = 3
+    provider_key = "key"
+    importance_key = "importance"
+
+    def insert_data_normalized(self, data_normalized: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any] | list[dict[str, Any]]:
+        raw_result = None
+        service_name = None
+        if hasattr(self, '_service_results_cache') and self._service_results_cache:
+            for svc_name, svc_data in self._service_results_cache.items():
+                if 'result' in svc_data:
+                    service_name = svc_name
+                    raw_result = svc_data['result']
+                    break
+        
+        if isinstance(data_normalized, list):
+            raw_list = raw_result if isinstance(raw_result, list) else None
+            for idx, item in enumerate(data_normalized):
+                item["backend"] = self.display_name
+                item["backend_name"] = self.name
+                item["geoaddress_id"] = self._generate_geoaddress_id(item.get('latitude'), item.get('longitude'))
+                item["text"] = self._build_address_string(item)
+                for field_name, format_config in GEOADDRESS_FIELDS_FORMATS.items():
+                    item[field_name] = self.insert_text_formatted(item, format_config, field_name)
+                
+                feature = raw_list[idx] if raw_list and idx < len(raw_list) else None
+                if not item.get('confidence'):
+                    item['confidence'] = self._calculate_confidence(item, feature=feature, importance_key=self.importance_key)
+                if not item.get('relevance'):
+                    query_components = self._extract_query_components(raw_result, service_name)
+                    query_lat = query_components.get('latitude')
+                    query_lon = query_components.get('longitude')
+                    item['relevance'] = self._calculate_relevance(query_components or {}, item, query_latitude=query_lat, query_longitude=query_lon)
+
+        elif isinstance(data_normalized, dict):
+            data_normalized["backend"] = self.display_name
+            data_normalized["backend_name"] = self.name
+            data_normalized["geoaddress_id"] = self._generate_geoaddress_id(data_normalized.get('latitude'), data_normalized.get('longitude'))
+            data_normalized["text"] = self._build_address_string(data_normalized)
+            for field_name, format_config in GEOADDRESS_FIELDS_FORMATS.items():
+                data_normalized[field_name] = self.insert_text_formatted(data_normalized, format_config, field_name)
+            
+            feature = raw_result if isinstance(raw_result, dict) else (raw_result[0] if isinstance(raw_result, list) and raw_result else None)
+            if not data_normalized.get('confidence'):
+                data_normalized['confidence'] = self._calculate_confidence(data_normalized, feature=feature, importance_key=self.importance_key)
+            if not data_normalized.get('relevance'):
+                query_components = self._extract_query_components(raw_result, service_name)
+                query_lat = query_components.get('latitude')
+                query_lon = query_components.get('longitude')
+                data_normalized['relevance'] = self._calculate_relevance(query_components or {}, data_normalized, query_latitude=query_lat, query_longitude=query_lon)
+        return data_normalized
+    
+    def _extract_query_components(self, raw_result: Any, service_name: str | None) -> dict[str, Any]:
+        query_components = {}
+        if service_name == "search_addresses":
+            query = getattr(self, 'search_addresses_query', None)
+            if not query and isinstance(raw_result, list) and raw_result:
+                first_item = raw_result[0] if raw_result else None
+                if isinstance(first_item, dict):
+                    query = first_item.get('query') or first_item.get('q') or first_item.get('display_name')
+            if query:
+                query_components['address_line1'] = str(query)
+        elif service_name == "reverse_geocode":
+            lat = getattr(self, 'reverse_geocode_latitude', None)
+            lon = getattr(self, 'reverse_geocode_longitude', None)
+            if lat is None or lon is None:
+                lat = getattr(self, 'latitude', None)
+                lon = getattr(self, 'longitude', None)
+            if lat is not None and lon is not None:
+                query_components['latitude'] = float(lat)
+                query_components['longitude'] = float(lon)
+        return query_components
+
+    def insert_text_formatted(self, data_normalized: dict[str, Any], format_config: list, field_name: str) -> list[str] | list[list[str]]:
+        result = []
+        for item in format_config:
+            if isinstance(item, list):
+                group_parts = [str(data_normalized.get(field, "")) for field in item if data_normalized.get(field)]
+                if group_parts:
+                    result.append(group_parts)
+            else:
+                value = data_normalized.get(item)
+                if value:
+                    result.append(str(value))
+        return result if result else []
 
     @staticmethod
     def _round_score(score: float, decimals: int = 2) -> float:
@@ -218,22 +308,23 @@ class GeoaddressProvider(ProviderBase):
         )
 
         if can_calculate_distance:
-            max_score += weights.get("distance", 0)
             try:
-                if query_latitude is not None and query_longitude is not None:
-                    distance_km = self._calculate_distance_km(
-                        query_latitude,
-                        query_longitude,
-                        float(normalized_result["latitude"]),
-                        float(normalized_result["longitude"]),
-                    )
-                    distance_score = weights.get("distance", 0) * (1.0 / (distance_km + 1.0))
-                    score += distance_score
+                distance_km = self._calculate_distance_km(
+                    query_latitude,
+                    query_longitude,
+                    float(normalized_result["latitude"]),
+                    float(normalized_result["longitude"]),
+                )
+                distance_score = weights.get("distance", 0) * (1.0 / (distance_km + 1.0))
+                score += distance_score
+                max_score += weights.get("distance", 0)
             except (TypeError, ValueError):
                 pass
 
         if max_score > 0:
             relevance_percent = min(100.0, max(0.0, (score / max_score) * 100.0))
+        elif can_calculate_distance:
+            relevance_percent = 100.0
         else:
             relevance_percent = 0.0
         return self._round_score(relevance_percent)
@@ -281,14 +372,7 @@ class GeoaddressProvider(ProviderBase):
         return ordered
 
     def _parse_proximity(self, proximity: str | None) -> tuple[float | None, float | None]:
-        """Parse proximity string to extract latitude and longitude.
-
-        Args:
-            proximity: Proximity string in format "lat,lon" (e.g., "2.3522,48.8566")
-
-        Returns:
-            Tuple of (latitude, longitude) or (None, None) if parsing fails.
-        """
+        """Parse proximity string to extract latitude and longitude."""
         if not proximity:
             return None, None
 
@@ -303,45 +387,7 @@ class GeoaddressProvider(ProviderBase):
 
         return None, None
 
-    def _generate_geoaddress_id(self, address: dict[str, Any]) -> str | None:
-        reference = address.get("reference")
-        backend_name = address.get("backend_name") or self.name
-        if not reference or not backend_name:
-            return None
-        return f"{backend_name}-{reference}"
-
-    def get_address_by_reference_latlon(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
-        """Get address by reference (latitude-longitude) using reverse geocoding.
-
-        This is a helper method for providers that use latitude-longitude format as reference.
-        It parses the reference and calls reverse_geocode.
-
-        Args:
-            reference: Reference string in format "latitude-longitude" (e.g., "49.287724-2.494634").
-            raw: If True, return raw provider response.
-
-        Returns:
-            Normalized address dictionary or None if error.
-        """
-        if not reference:
-            if raw:
-                return {"error": "Reference is required"}
-            return None
-
-        try:
-            match = re.match(r"^(-?\d+\.?\d*)-(-?\d+\.?\d*)$", reference)
-            if not match:
-                if raw:
-                    return {"error": "Invalid reference format. Expected 'latitude-longitude'"}
-                return None
-
-            latitude = float(match.group(1))
-            longitude = float(match.group(2))
-        except (ValueError, IndexError):
-            if raw:
-                return {"error": "Invalid latitude/longitude in reference"}
-            return None
-
-        result = self.reverse_geocode(latitude, longitude, raw=raw)
-        return result if isinstance(result, dict) else None
-
+    def _generate_geoaddress_id(self, latitude: float | None, longitude: float | None) -> str:
+        if latitude is None or longitude is None:
+            return f"{self.name}-unknown"
+        return f"{self.name}_{latitude}:{longitude}"

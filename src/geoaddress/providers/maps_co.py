@@ -5,6 +5,23 @@ from typing import Any
 
 from . import GeoaddressProvider
 
+MAPS_CO_SEARCH_ADDRESSES_SOURCE = {
+    'city': ['address.city', 'address.town', 'address.village'],
+    'postal_code': ['address.postcode'],
+    'county': ['address.county'],
+    'state': ['address.state', 'address.province'],
+    'region': ['address.region'],
+    'country_code': ['address.country_code'],
+    'country': ['address.country'],
+    'municipality': ['address.municipality'],
+    'neighbourhood': ['address.neighbourhood', 'address.suburb', 'address.quarter'],
+    'address_type': ['type', 'class'],
+    'latitude': ['lat', 'centroid.coordinates.1', 'geometry.coordinates.1'],
+    'longitude': ['lon', 'centroid.coordinates.0', 'geometry.coordinates.0'],
+    'osm_id': ['osm_id'],
+    'osm_type': ['osm_type'],
+}
+
 
 class MapsCoProvider(GeoaddressProvider):
     name = "maps_co"
@@ -25,60 +42,35 @@ class MapsCoProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://geocode.maps.co")
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
+        for field, source in MAPS_CO_SEARCH_ADDRESSES_SOURCE.items():
+            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
-    _field_mapping: dict[str, Any] = {
-        "reference": lambda r: str(r.get("place_id")) if r.get("place_id") else None,
-        "address_line1": lambda r: (
-            f"{r.get('address', {}).get('house_number', '')} {r.get('address', {}).get('road', '')}".strip()
-            if r.get("address", {}).get("house_number") and r.get("address", {}).get("road")
-            else r.get("address", {}).get("road", "")
-        ),
-        "address_line2": "",
-        "address_line3": "",
-        "city": lambda r: (
-            r.get("address", {}).get("city")
-            or r.get("address", {}).get("town")
-            or r.get("address", {}).get("village")
-            or ""
-        ),
-        "postal_code": "address.postcode",
-        "county": "address.county",
-        "state": lambda r: r.get("address", {}).get("state") or r.get("address", {}).get("province") or "",
-        "region": "address.region",
-        "country_code": lambda r: (r.get("address", {}).get("country_code", "") or "").upper(),
-        "country": lambda r: r.get("address", {}).get("country", "") or "",
-        "municipality": "address.municipality",
-        "neighbourhood": lambda r: (
-            r.get("address", {}).get("quarter")
-            or r.get("address", {}).get("neighbourhood")
-            or r.get("address", {}).get("suburb")
-            or ""
-        ),
-        "address_type": lambda r: (
-            (
-                r.get("type")
-                if r.get("class") in ("place", "highway")
-                else (r.get("type") or "building")
-                if r.get("class") == "building"
-                else (f"{r.get('class')}_{r.get('type')}" if r.get("type") else r.get("class"))
+    def get_normalize_address_type(self, data: dict[str, Any]) -> str:
+        return (
+            (data.get("type")
+                if data.get("class") in ("place", "highway")
+                else (data.get("type") or "building")
+                if data.get("class") == "building"
+                else (f"{data.get('class')}_{data.get('type')}" if data.get("type") else data.get("class"))
             )
-            if r.get("class") and r.get("type")
-            else (r.get("class") or r.get("type") or "")
-        ),
-        "latitude": lambda r: float(r["lat"]) if r.get("lat") else None,
-        "longitude": lambda r: float(r["lon"]) if r.get("lon") else None,
-        "osm_id": lambda r: int(r["osm_id"]) if r.get("osm_id") is not None else None,
-        "osm_type": lambda r: r.get("osm_type", "").upper() if r.get("osm_type") else None,
-    }
+            if data.get("class") and data.get("type")
+            else (data.get("class") or data.get("type") or "")
+        )
+
+    def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
+        src_hn = ['house_number', 'address.house_number', 'addresstags.house_number']
+        src_rd = ['street', 'road', 'address.road', 'addresstags.street']
+        house_number = self._normalize_recursive(data, 'address_line1', src_hn)
+        road = self._normalize_recursive(data, 'address_line1', src_rd)
+        return f'{house_number} {road}'.strip()
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Maps.co."""
-        raw = kwargs.pop('raw', False)
+        self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
-            if raw:
-                return [{"error": "MAPS_CO_API_KEY not configured"}]
-            return []
+            raise ValueError("MAPS_CO_API_KEY not configured")
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -99,60 +91,24 @@ class MapsCoProvider(GeoaddressProvider):
             params["lat"] = str(lat)
             params["lon"] = str(lon)
 
-        try:
-            response = requests.get(f"{self._base_url}/search", params=params, timeout=10)
-            response.raise_for_status()
-            results = response.json()
+        response = requests.get(f"{self._base_url}/search", params=params, timeout=self.geoaddress_timeout)
+        response.raise_for_status()
+        return response.json()
 
-            if raw:
-                return results if isinstance(results, list) else [results] if results else []
-
-            if isinstance(results, dict):
-                if "error" in results:
-                    return []
-                results = [results]
-
-            if not isinstance(results, list):
-                return []
-
-            addresses = []
-            for feature in results:
-                normalized = self._normalize_from_mapping(feature, self._field_mapping)
-                normalized["backend"] = self.display_name
-                normalized["backend_name"] = self.name
-                normalized["text"] = self._build_address_string(normalized)
-                normalized["confidence"] = self._calculate_confidence(
-                    normalized,
-                    feature=feature,
-                    importance_key="importance",
-                )
-                normalized["relevance"] = self._calculate_relevance(
-                    {"address_line1": query},
-                    normalized,
-                )
-                normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                normalized = self._order_normalized_fields(normalized)
-                addresses.append(normalized)
-
-            return addresses
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-        except Exception as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-
-    def reverse_geocode(self, latitude: float, longitude: float, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Reverse geocode coordinates to an address using Maps.co."""
+        if latitude is None:
+            latitude = kwargs.pop('latitude', None)
+        if longitude is None:
+            longitude = kwargs.pop('longitude', None)
+        if latitude is None or longitude is None:
+            raise ValueError("latitude and longitude are required")
+        
         if not self._api_key:
-            if raw:
-                return {"error": "MAPS_CO_API_KEY not configured"}
-            return None
+            raise ValueError("MAPS_CO_API_KEY not configured")
+
+        self.reverse_geocode_latitude = latitude
+        self.reverse_geocode_longitude = longitude
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -168,186 +124,10 @@ class MapsCoProvider(GeoaddressProvider):
             "addressdetails": 1,
         }
 
-        try:
-            response = requests.get(f"{self._base_url}/reverse", params=params, timeout=10)
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(f"{self._base_url}/reverse", params=params, timeout=self.geoaddress_timeout)
+        response.raise_for_status()
+        result = response.json()
+        if isinstance(result, dict):
+            return [result]
+        return result
 
-            if raw:
-                return result if isinstance(result, dict) else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            if not isinstance(result, dict):
-                return None
-
-            normalized = self._normalize_from_mapping(result, self._field_mapping)
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-            normalized["confidence"] = self._calculate_confidence(
-                normalized,
-                feature=result,
-                importance_key="importance",
-            )
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-
-    def get_address_by_reference(self, _reference: str, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
-        """Get address by reference using Maps.co."""
-        error_msg = "Maps.co does not support get_address_by_reference"
-        if raw:
-            return {"error": error_msg}
-        return None
-
-    def get_address_by_osm(self, osm_keys_value: dict[str, Any], raw: bool = False) -> list[dict[str, Any]] | None:  # noqa: C901
-
-        """Get address by OSM key-value pairs or OSM ID using Maps.co."""
-        if not self._api_key:
-            if raw:
-                return [{"error": "MAPS_CO_API_KEY not configured"}]
-            return []
-
-        if not osm_keys_value or not isinstance(osm_keys_value, dict):
-            if raw:
-                return [{"error": "osm_keys_value must be a non-empty dictionary"}]
-            return []
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 1.0:
-            time.sleep(1.0 - time_since_last)
-        self._last_request_time = time.time()
-
-        headers: dict[str, str] = {}
-
-        if "osm_id" in osm_keys_value and "osm_type" in osm_keys_value:
-            osm_id = osm_keys_value.get("osm_id")
-            osm_type = osm_keys_value.get("osm_type")
-
-            if not osm_id or not osm_type:
-                if raw:
-                    return [{"error": "osm_id and osm_type are required when using OSM ID lookup"}]
-                return []
-
-            try:
-                osm_id_int = int(osm_id)
-                osm_type_str = str(osm_type).upper()
-            except (ValueError, TypeError):
-                if raw:
-                    return [{"error": "Invalid OSM ID format"}]
-                return []
-
-            params = {
-                "api_key": self._api_key,
-                "osm_ids": f"{osm_type_str}{osm_id_int}",
-                "format": "json",
-                "addressdetails": 1,
-            }
-
-            try:
-                response = requests.get(f"{self._base_url}/lookup", params=params, headers=headers, timeout=10)
-                response.raise_for_status()
-                results = response.json()
-
-                if not isinstance(results, list):
-                    return []
-
-                if raw:
-                    return results
-
-                addresses = []
-                for feature in results:
-                    normalized = self._normalize_from_mapping(feature, self._field_mapping)
-                    normalized["backend"] = self.display_name
-                    normalized["backend_name"] = self.name
-                    normalized["text"] = self._build_address_string(normalized)
-                    normalized["confidence"] = self._calculate_confidence(
-                        normalized,
-                        feature=feature,
-                        importance_key="importance",
-                    )
-                    normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                    normalized = self._order_normalized_fields(normalized)
-                    addresses.append(normalized)
-
-                return addresses
-            except Exception:
-                return []
-        else:
-            query_parts = []
-            for key, value in osm_keys_value.items():
-                if key and value:
-                    query_parts.append(f"[{key}={value}]")
-
-            if not query_parts:
-                if raw:
-                    return [{"error": "At least one valid OSM key-value pair is required"}]
-                return []
-
-            query = "".join(query_parts)
-
-            params = {
-                "api_key": self._api_key,
-                "q": query,
-                "format": "json",
-                "addressdetails": 1,
-                "limit": 10,
-            }
-
-            try:
-                response = requests.get(f"{self._base_url}/search", params=params, headers=headers, timeout=10)
-                response.raise_for_status()
-                results = response.json()
-
-                if raw:
-                    return results if isinstance(results, list) else [results] if results else []
-
-                if isinstance(results, dict):
-                    if "error" in results:
-                        return []
-                    results = [results]
-
-                if not isinstance(results, list):
-                    return []
-
-                addresses = []
-                for feature in results:
-                    normalized = self._normalize_from_mapping(feature, self._field_mapping)
-                    normalized["backend"] = self.display_name
-                    normalized["backend_name"] = self.name
-                    normalized["text"] = self._build_address_string(normalized)
-                    normalized["confidence"] = self._calculate_confidence(
-                        normalized,
-                        feature=feature,
-                        importance_key="importance",
-                    )
-                    normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                    normalized = self._order_normalized_fields(normalized)
-                    addresses.append(normalized)
-
-                return addresses
-            except requests.exceptions.Timeout:
-                raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-            except requests.exceptions.RequestException as e:
-                if raw:
-                    return [{"error": str(e)}]
-                return []
-            except Exception as e:
-                if raw:
-                    return [{"error": str(e)}]
-                return []

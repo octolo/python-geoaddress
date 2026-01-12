@@ -5,6 +5,21 @@ from typing import Any
 
 from . import GeoaddressProvider
 
+GOOGLE_SEARCH_ADDRESSES_SOURCE = {
+    'city': ['address_components.locality', 'address_components.postal_town'],
+    'postal_code': ['address_components.postal_code'],
+    'county': ['address_components.administrative_area_level_2'],
+    'state': ['address_components.administrative_area_level_1'],
+    'region': ['address_components.administrative_area_level_2'],
+    'country_code': ['address_components.country'],
+    'country': ['address_components.country'],
+    'municipality': ['address_components.administrative_area_level_3', 'address_components.sublocality_level_1'],
+    'neighbourhood': ['address_components.neighborhood', 'address_components.sublocality'],
+    'address_type': ['types'],
+    'latitude': ['geometry.location.lat'],
+    'longitude': ['geometry.location.lng'],
+}
+
 
 class GoogleMapsProvider(GeoaddressProvider):
     name = "google_maps"
@@ -17,7 +32,6 @@ class GoogleMapsProvider(GeoaddressProvider):
     config_required = ["API_KEY"]
     cost_search_addresses = 0.005
     cost_reverse_geocode = 0.005
-    cost_get_address_by_reference = 0.005
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Google Maps provider."""
@@ -25,90 +39,103 @@ class GoogleMapsProvider(GeoaddressProvider):
         self._base_url = "https://maps.googleapis.com/maps/api"
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
+        for field, source in GOOGLE_SEARCH_ADDRESSES_SOURCE.items():
+            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
-    def _extract_address_from_result(self, result: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
-
-        """Extract address components from a Google Maps result."""
-        address_components = result.get("address_components", [])
-
-        address_line1 = ""
-        address_line2 = ""
-        city = ""
-        postal_code = ""
-        state = ""
-        region = ""
-        county = ""
-        municipality = ""
-        neighbourhood = ""
-        country_code = ""
-        country = ""
-        address_type = ""
-
-        street_number = ""
-        route = ""
-
+    def _extract_component_by_type(self, address_components: list[dict[str, Any]], types_list: list[str]) -> dict[str, str]:
+        """Extract component by types from address_components."""
         for component in address_components:
-            types = component.get("types", [])
-            long_name = component.get("long_name", "")
-            short_name = component.get("short_name", "")
+            component_types = component.get("types", [])
+            if any(t in component_types for t in types_list):
+                return {
+                    "long_name": component.get("long_name", ""),
+                    "short_name": component.get("short_name", ""),
+                }
+        return {"long_name": "", "short_name": ""}
 
-            if "street_number" in types:
-                street_number = long_name
-            elif "route" in types:
-                route = long_name
-            elif "locality" in types or "postal_town" in types:
-                city = city if city else long_name
-            elif "postal_code" in types:
-                postal_code = long_name
-            elif "administrative_area_level_1" in types:
-                state = long_name
-            elif "administrative_area_level_2" in types:
-                county = long_name
-                region = long_name
-            elif "administrative_area_level_3" in types or "sublocality_level_1" in types:
-                municipality = municipality if municipality else long_name
-            elif "neighborhood" in types or "sublocality" in types:
-                neighbourhood = neighbourhood if neighbourhood else long_name
-            elif "country" in types:
-                country_code = short_name.upper()
-                country = long_name
+    def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        street_number = self._extract_component_by_type(address_components, ["street_number"])
+        route = self._extract_component_by_type(address_components, ["route"])
+        street_number_val = street_number.get("long_name", "")
+        route_val = route.get("long_name", "")
+        if street_number_val and route_val:
+            return f"{street_number_val} {route_val}".strip()
+        if route_val:
+            return route_val
+        return ""
 
-        if street_number and route:
-            address_line1 = f"{street_number} {route}".strip()
-        elif route:
-            address_line1 = route
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        city_component = self._extract_component_by_type(address_components, ["locality", "postal_town"])
+        return city_component.get("long_name", "") or ""
 
-        types_list = result.get("types", [])
-        if types_list:
-            address_type = types_list[0] if isinstance(types_list, list) else str(types_list)
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        postal_component = self._extract_component_by_type(address_components, ["postal_code"])
+        return postal_component.get("long_name", "") or ""
 
-        place_id = result.get("place_id")
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        county_component = self._extract_component_by_type(address_components, ["administrative_area_level_2"])
+        return county_component.get("long_name", "") or ""
 
-        return {
-            "address_line1": address_line1,
-            "address_line2": address_line2,
-            "address_line3": "",
-            "city": city,
-            "postal_code": postal_code,
-            "county": county,
-            "state": state,
-            "region": region,
-            "country_code": country_code,
-            "country": country,
-            "municipality": municipality,
-            "neighbourhood": neighbourhood,
-            "address_type": address_type,
-            "reference": str(place_id) if place_id else None,
-        }
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        state_component = self._extract_component_by_type(address_components, ["administrative_area_level_1"])
+        return state_component.get("long_name", "") or ""
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        region_component = self._extract_component_by_type(address_components, ["administrative_area_level_2"])
+        return region_component.get("long_name", "") or ""
+
+    def get_normalize_country_code(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        country_component = self._extract_component_by_type(address_components, ["country"])
+        country_code = country_component.get("short_name", "")
+        return country_code.upper() if country_code else ""
+
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        country_component = self._extract_component_by_type(address_components, ["country"])
+        return country_component.get("long_name", "") or ""
+
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        municipality_component = self._extract_component_by_type(address_components, ["administrative_area_level_3", "sublocality_level_1"])
+        return municipality_component.get("long_name", "") or ""
+
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        address_components = data.get("address_components", [])
+        neighbourhood_component = self._extract_component_by_type(address_components, ["neighborhood", "sublocality"])
+        return neighbourhood_component.get("long_name", "") or ""
+
+    def get_normalize_address_type(self, data: dict[str, Any]) -> str:
+        types_list = data.get("types", [])
+        if types_list and isinstance(types_list, list):
+            return types_list[0] if types_list else ""
+        return str(types_list) if types_list else ""
+
+    def get_normalize_latitude(self, data: dict[str, Any]) -> float | None:
+        geometry = data.get("geometry", {})
+        location = geometry.get("location", {})
+        lat_val = location.get("lat")
+        return float(lat_val) if lat_val is not None else None
+
+    def get_normalize_longitude(self, data: dict[str, Any]) -> float | None:
+        geometry = data.get("geometry", {})
+        location = geometry.get("location", {})
+        lng_val = location.get("lng")
+        return float(lng_val) if lng_val is not None else None
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Google Maps."""
-        raw = kwargs.pop('raw', False)
+        self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
-            if raw:
-                return [{"error": "GOOGLE_MAPS_API_KEY not configured"}]
-            return []
+            raise ValueError("GOOGLE_MAPS_API_KEY not configured")
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -125,85 +152,32 @@ class GoogleMapsProvider(GeoaddressProvider):
         if lat is not None and lon is not None:
             params["location"] = f"{lat},{lon}"
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode/json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if raw:
-                results_list = result.get("results", []) if isinstance(result, dict) else []
-                return results_list if isinstance(results_list, list) else []
-
-            if isinstance(result, dict) and "error" in result:
-                return []
-
-            if result.get("status") != "OK":
-                return []
-
-            results_list = result.get("results", [])
-            if not isinstance(results_list, list):
-                return []
-
-            addresses = []
-            for item in results_list:
-                try:
-                    normalized = self._extract_address_from_result(item)
-
-                    geometry = item.get("geometry", {})
-                    location = geometry.get("location", {})
-                    if location:
-                        lat_val = location.get("lat")
-                        lon_val = location.get("lng")
-                        if lat_val is not None:
-                            normalized["latitude"] = float(lat_val)
-                        if lon_val is not None:
-                            normalized["longitude"] = float(lon_val)
-
-                    normalized["backend"] = self.display_name
-                    normalized["backend_name"] = self.name
-                    normalized["text"] = self._build_address_string(normalized)
-
-                    location_type = geometry.get("location_type", "")
-                    confidence_map = {
-                        "ROOFTOP": 100.0,
-                        "RANGE_INTERPOLATED": 90.0,
-                        "GEOMETRIC_CENTER": 70.0,
-                        "APPROXIMATE": 50.0,
-                    }
-                    normalized["confidence"] = confidence_map.get(location_type, 50.0)
-                    normalized["relevance"] = self._calculate_relevance(
-                        {"address_line1": query},
-                        normalized,
-                    )
-                    normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                    normalized = self._order_normalized_fields(normalized)
-                    addresses.append(normalized)
-                except Exception:
-                    continue
-
-            return addresses
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return [{"error": str(e)}]
+        response = requests.get(
+            f"{self._base_url}/geocode/json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        if result.get("status") != "OK":
             return []
-        except Exception as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
+        results_list = result.get("results", []) if isinstance(result, dict) else []
+        return results_list if isinstance(results_list, list) else []
 
-    def reverse_geocode(self, latitude: float, longitude: float, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Reverse geocode coordinates to an address using Google Maps."""
+        if latitude is None:
+            latitude = kwargs.pop('latitude', None)
+        if longitude is None:
+            longitude = kwargs.pop('longitude', None)
+        if latitude is None or longitude is None:
+            raise ValueError("latitude and longitude are required")
+
         if not self._api_key:
-            if raw:
-                return {"error": "GOOGLE_MAPS_API_KEY not configured"}
-            return None
+            raise ValueError("GOOGLE_MAPS_API_KEY not configured")
+
+        self.reverse_geocode_latitude = latitude
+        self.reverse_geocode_longitude = longitude
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -216,141 +190,15 @@ class GoogleMapsProvider(GeoaddressProvider):
             "latlng": f"{latitude},{longitude}",
         }
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode/json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/geocode/json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        if result.get("status") != "OK":
+            return []
+        results_list = result.get("results", []) if isinstance(result, dict) else []
+        return results_list if isinstance(results_list, list) else []
 
-            if raw:
-                results_list = result.get("results", []) if isinstance(result, dict) else []
-                return results_list[0] if results_list else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            if result.get("status") != "OK":
-                return None
-
-            results_list = result.get("results", [])
-            if not results_list:
-                return None
-
-            item = results_list[0]
-            normalized = self._extract_address_from_result(item)
-
-            normalized["latitude"] = latitude
-            normalized["longitude"] = longitude
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-
-            geometry = item.get("geometry", {})
-            location_type = geometry.get("location_type", "")
-            confidence_map = {
-                "ROOFTOP": 100.0,
-                "RANGE_INTERPOLATED": 90.0,
-                "GEOMETRIC_CENTER": 70.0,
-                "APPROXIMATE": 50.0,
-            }
-            normalized["confidence"] = confidence_map.get(location_type, 50.0)
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-
-    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
-        """Get address by reference (place_id) using Google Maps."""
-        if not self._api_key:
-            if raw:
-                return {"error": "GOOGLE_MAPS_API_KEY not configured"}
-            return None
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
-        params = {
-            "key": self._api_key,
-            "place_id": reference,
-        }
-
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode/json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if raw:
-                results_list = result.get("results", []) if isinstance(result, dict) else []
-                return results_list[0] if results_list else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            if result.get("status") != "OK":
-                return None
-
-            results_list = result.get("results", [])
-            if not results_list:
-                return None
-
-            item = results_list[0]
-            normalized = self._extract_address_from_result(item)
-
-            geometry = item.get("geometry", {})
-            location = geometry.get("location", {})
-            if location:
-                lat_val = location.get("lat")
-                lon_val = location.get("lng")
-                if lat_val is not None:
-                    normalized["latitude"] = float(lat_val)
-                if lon_val is not None:
-                    normalized["longitude"] = float(lon_val)
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-
-            location_type = geometry.get("location_type", "")
-            confidence_map = {
-                "ROOFTOP": 100.0,
-                "RANGE_INTERPOLATED": 90.0,
-                "GEOMETRIC_CENTER": 70.0,
-                "APPROXIMATE": 50.0,
-            }
-            normalized["confidence"] = confidence_map.get(location_type, 50.0)
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None

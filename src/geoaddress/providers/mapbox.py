@@ -6,6 +6,21 @@ from typing import Any
 
 from . import GeoaddressProvider
 
+MAPBOX_SEARCH_ADDRESSES_SOURCE = {
+    'city': ['context.place'],
+    'postal_code': ['context.postcode'],
+    'county': ['context.county'],
+    'state': ['context.region'],
+    'region': ['context.region'],
+    'country_code': ['context.country'],
+    'country': ['context.country'],
+    'municipality': ['context.district'],
+    'neighbourhood': ['context.neighborhood'],
+    'address_type': ['properties.type'],
+    'latitude': ['geometry.coordinates.1'],
+    'longitude': ['geometry.coordinates.0'],
+}
+
 
 class MapboxProvider(GeoaddressProvider):
     name = "mapbox"
@@ -18,7 +33,6 @@ class MapboxProvider(GeoaddressProvider):
     config_required = ["ACCESS_TOKEN"]
     cost_search_addresses = 0.0005
     cost_reverse_geocode = 0.0005
-    cost_get_address_by_reference = 0.0005
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Mapbox provider."""
@@ -26,6 +40,9 @@ class MapboxProvider(GeoaddressProvider):
         self._base_url = "https://api.mapbox.com"
         self._access_token = self._get_config_or_env("ACCESS_TOKEN")
         self._last_request_time = 0.0
+        for field, source in MAPBOX_SEARCH_ADDRESSES_SOURCE.items():
+            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def _extract_context_value(self, context: list[dict[str, Any]], prefix: str) -> str:
         """Extract value from context array by id prefix."""
@@ -35,93 +52,91 @@ class MapboxProvider(GeoaddressProvider):
                 return item.get("text", "")  # type: ignore[no-any-return]
         return ""
 
-    def _extract_address_from_feature(self, feature: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
-
-        """Extract address components from a Mapbox feature."""
-        properties = feature.get("properties", {})
-        context = feature.get("context", [])
-
+    def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
         address_line1 = properties.get("address", "")
-        if not address_line1:
-            place_name = feature.get("place_name", "")
-            if place_name:
-                parts = place_name.split(",")
-                if parts:
-                    address_line1 = parts[0].strip()
+        if address_line1:
+            return address_line1
+        place_name = data.get("place_name", "")
+        if place_name:
+            parts = place_name.split(",")
+            if parts:
+                return parts[0].strip()
+        address_number = properties.get("address_number", "")
+        street = properties.get("street", "")
+        if address_number and street:
+            return f"{address_number} {street}".strip()
+        if street:
+            return street
+        text = data.get("text", "")
+        return text if text else ""
 
-        if not address_line1:
-            address_number = properties.get("address_number", "")
-            street = properties.get("street", "")
-            if address_number and street:
-                address_line1 = f"{address_number} {street}".strip()
-            elif street:
-                address_line1 = street
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        return self._extract_context_value(context, "place")
 
-        if not address_line1:
-            text = feature.get("text", "")
-            address_line1 = text if text else ""
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        return self._extract_context_value(context, "postcode")
 
-        city = self._extract_context_value(context, "place")
-        postal_code = self._extract_context_value(context, "postcode")
-        county = self._extract_context_value(context, "county")
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        return self._extract_context_value(context, "county")
+
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
         state = ""
-        region = ""
+        for item in context:
+            item_id = item.get("id", "")
+            if item_id.startswith("region"):
+                region_text = item.get("text", "")
+                if region_text and not state:
+                    state = region_text
+                    break
+        return state
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        regions = []
         for item in context:
             item_id = item.get("id", "")
             if item_id.startswith("region"):
                 region_text = item.get("text", "")
                 if region_text:
-                    if not state:
-                        state = region_text
-                    else:
-                        region = region_text
+                    regions.append(region_text)
+        return regions[-1] if len(regions) > 1 else ""
 
-        municipality = self._extract_context_value(context, "district")
-        neighbourhood = self._extract_context_value(context, "neighborhood")
-
-        country_code = ""
-        country = ""
+    def get_normalize_country_code(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
         for item in context:
             item_id = item.get("id", "")
             if item_id.startswith("country"):
-                country_code = item.get("short_code", "").upper()
-                country = item.get("text", "")
-                break
+                country_code = item.get("short_code", "")
+                return country_code.upper() if country_code else ""
+        return ""
 
-        address_type = properties.get("type", "")
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        for item in context:
+            item_id = item.get("id", "")
+            if item_id.startswith("country"):
+                return item.get("text", "") or ""
+        return ""
 
-        coords = feature.get("geometry", {}).get("coordinates", [])
-        reference = None
-        if len(coords) >= 2:
-            latitude = float(coords[1])
-            longitude = float(coords[0])
-            reference = f"{latitude}-{longitude}"
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        return self._extract_context_value(context, "district")
 
-        return {
-            "address_line1": address_line1,
-            "address_line2": "",
-            "address_line3": "",
-            "city": city,
-            "postal_code": postal_code,
-            "county": county,
-            "state": state,
-            "region": region,
-            "country_code": country_code,
-            "country": country,
-            "municipality": municipality,
-            "neighbourhood": neighbourhood,
-            "address_type": address_type,
-            "reference": reference,
-        }
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        context = data.get("context", [])
+        return self._extract_context_value(context, "neighborhood")
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Mapbox."""
-        raw = kwargs.pop('raw', False)
+        self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._access_token:
-            if raw:
-                return [{"error": "MAPBOX_ACCESS_TOKEN not configured"}]
-            return []
+            raise ValueError("MAPBOX_ACCESS_TOKEN not configured")
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -139,67 +154,30 @@ class MapboxProvider(GeoaddressProvider):
         if lat is not None and lon is not None:
             params["proximity"] = f"{lon},{lat}"
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocoding/v5/mapbox.places/{encoded_query}.json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/geocoding/v5/mapbox.places/{encoded_query}.json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        features = result.get("features", []) if isinstance(result, dict) else []
+        return features if isinstance(features, list) else []
 
-            if raw:
-                features = result.get("features", []) if isinstance(result, dict) else []
-                return features if isinstance(features, list) else []
-
-            if isinstance(result, dict) and "error" in result:
-                return []
-
-            features = result.get("features", []) if isinstance(result, dict) else []
-            if not isinstance(features, list):
-                return []
-
-            addresses = []
-            for feature in features:
-                normalized = self._extract_address_from_feature(feature)
-
-                coords = feature.get("geometry", {}).get("coordinates", [])
-                if len(coords) >= 2:
-                    normalized["longitude"] = float(coords[0])
-                    normalized["latitude"] = float(coords[1])
-
-                normalized["backend"] = self.display_name
-                normalized["backend_name"] = self.name
-                normalized["text"] = self._build_address_string(normalized)
-                normalized["confidence"] = self._calculate_confidence_heuristic(normalized)
-                relevance_value = feature.get("relevance")
-                if relevance_value is not None:
-                    normalized["relevance"] = self._round_score(float(relevance_value) * 100.0)
-                else:
-                    normalized["relevance"] = 0.0
-                normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                normalized = self._order_normalized_fields(normalized)
-                addresses.append(normalized)
-
-            return addresses
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-        except Exception as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-
-    def reverse_geocode(self, latitude: float, longitude: float, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Reverse geocode coordinates to an address using Mapbox."""
+        if latitude is None:
+            latitude = kwargs.pop('latitude', None)
+        if longitude is None:
+            longitude = kwargs.pop('longitude', None)
+        if latitude is None or longitude is None:
+            raise ValueError("latitude and longitude are required")
+
         if not self._access_token:
-            if raw:
-                return {"error": "MAPBOX_ACCESS_TOKEN not configured"}
-            return None
+            raise ValueError("MAPBOX_ACCESS_TOKEN not configured")
+
+        self.reverse_geocode_latitude = latitude
+        self.reverse_geocode_longitude = longitude
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -212,58 +190,13 @@ class MapboxProvider(GeoaddressProvider):
             "limit": 1,
         }
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocoding/v5/mapbox.places/{longitude},{latitude}.json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/geocoding/v5/mapbox.places/{longitude},{latitude}.json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        features = result.get("features", []) if isinstance(result, dict) else []
+        return features if isinstance(features, list) else []
 
-            if raw:
-                features = result.get("features", []) if isinstance(result, dict) else []
-                return features[0] if features else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            features = result.get("features", []) if isinstance(result, dict) else []
-            if not features:
-                return None
-
-            feature = features[0]
-            normalized = self._extract_address_from_feature(feature)
-
-            coords = feature.get("geometry", {}).get("coordinates", [])
-            if len(coords) >= 2:
-                normalized["longitude"] = float(coords[0])
-                normalized["latitude"] = float(coords[1])
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-            normalized["confidence"] = self._calculate_confidence_heuristic(normalized)
-            relevance_value = feature.get("relevance")
-            if relevance_value is not None:
-                normalized["relevance"] = self._round_score(float(relevance_value) * 100.0)
-            else:
-                normalized["relevance"] = 0.0
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-
-    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
-        """Get address by reference (latitude-longitude) using reverse geocoding."""
-        return self.get_address_by_reference_latlon(reference, raw=raw)

@@ -118,11 +118,6 @@ GEOADDRESS_FIELDS_EXTENDED = {
         "description": "Full formatted address string (3 lines)",
         "format": "text",
     },
-    "reference": {
-        "label": "Backend reference ID (place ID)",
-        "description": "Backend reference ID (place ID)",
-        "format": "str",
-    },
     "address_type": {
         "label": "Address type or place type",
         "description": "Address type or place type",

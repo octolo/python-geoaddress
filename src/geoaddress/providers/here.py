@@ -5,6 +5,21 @@ from typing import Any
 
 from . import GeoaddressProvider
 
+HERE_SEARCH_ADDRESSES_SOURCE = {
+    'city': ['Location.Address.City'],
+    'postal_code': ['Location.Address.PostalCode'],
+    'county': ['Location.Address.County'],
+    'state': ['Location.Address.State'],
+    'region': ['Location.Address.Region', 'Location.Address.County'],
+    'country_code': ['Location.Address.Country'],
+    'country': ['Location.Address.Country'],
+    'municipality': ['Location.Address.Municipality', 'Location.Address.District'],
+    'neighbourhood': ['Location.Address.Subdistrict', 'Location.Address.Neighborhood'],
+    'address_type': [],
+    'latitude': ['Location.DisplayPosition.Latitude'],
+    'longitude': ['Location.DisplayPosition.Longitude'],
+}
+
 
 class HereProvider(GeoaddressProvider):
     name = "here"
@@ -17,7 +32,6 @@ class HereProvider(GeoaddressProvider):
     config_required = ["APP_ID", "APP_CODE"]
     cost_search_addresses = 0.001
     cost_reverse_geocode = 0.001
-    cost_get_address_by_reference = 0.001
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Here provider."""
@@ -26,59 +40,51 @@ class HereProvider(GeoaddressProvider):
         self._app_id = self._get_config_or_env("APP_ID")
         self._app_code = self._get_config_or_env("APP_CODE")
         self._last_request_time = 0.0
+        for field, source in HERE_SEARCH_ADDRESSES_SOURCE.items():
+            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
-    def _extract_address_from_result(self, result: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
-
-        """Extract address components from a Here result."""
-        location = result.get("Location", {})
+    def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
         address = location.get("Address", {})
-
-        address_line1 = ""
         street = address.get("Street", "")
         house_number = address.get("HouseNumber", "")
         if house_number and street:
-            address_line1 = f"{house_number} {street}".strip()
-        elif street:
-            address_line1 = street
+            return f"{house_number} {street}".strip()
+        if street:
+            return street
+        return ""
 
-        city = address.get("City", "")
-        postal_code = address.get("PostalCode", "")
-        state = address.get("State", "")
-        county = address.get("County", "")
-        region = address.get("Region", "") or (county if not address.get("Region", "") else "")
-        country_code = address.get("Country", "").upper()
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        region = address.get("Region", "")
+        if not region:
+            region = address.get("County", "")
+        return region or ""
+
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("Municipality", "") or address.get("District", "")
+
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("Subdistrict", "") or address.get("Neighborhood", "")
+
+    def get_normalize_country_code(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
         country = address.get("Country", "")
-
-        municipality = address.get("Municipality", "") or address.get("District", "")
-        neighbourhood = address.get("Subdistrict", "") or address.get("Neighborhood", "")
-
-        location_id = location.get("LocationId")
-
-        return {
-            "address_line1": address_line1,
-            "address_line2": "",
-            "address_line3": "",
-            "city": city,
-            "postal_code": postal_code,
-            "county": county,
-            "state": state,
-            "region": region,
-            "country_code": country_code,
-            "country": country,
-            "municipality": municipality,
-            "neighbourhood": neighbourhood,
-            "address_type": "",
-            "reference": str(location_id) if location_id else None,
-        }
+        return country.upper() if country else ""
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using Here."""
-        raw = kwargs.pop('raw', False)
+        self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._app_id or not self._app_code:
-            if raw:
-                return [{"error": "HERE_APP_ID and HERE_APP_CODE must be configured"}]
-            return []
+            raise ValueError("HERE_APP_ID and HERE_APP_CODE must be configured")
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -97,83 +103,32 @@ class HereProvider(GeoaddressProvider):
         if lat is not None and lon is not None:
             params["prox"] = f"{lat},{lon},5000"
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode.json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/geocode.json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        response_data = result.get("Response", {}) if isinstance(result, dict) else {}
+        view = response_data.get("View", [])
+        results_list = view[0].get("Result", []) if view else []
+        return results_list if isinstance(results_list, list) else []
 
-            if raw:
-                response_data = result.get("Response", {}) if isinstance(result, dict) else {}
-                view = response_data.get("View", [])
-                results_list = view[0].get("Result", []) if view else []
-                return results_list if isinstance(results_list, list) else []
-
-            if isinstance(result, dict) and "error" in result:
-                return []
-
-            response_data = result.get("Response", {}) if isinstance(result, dict) else {}
-            view = response_data.get("View", [])
-            if not view:
-                return []
-
-            results_list = view[0].get("Result", [])
-            if not isinstance(results_list, list):
-                return []
-
-            addresses = []
-            for item in results_list:
-                try:
-                    normalized = self._extract_address_from_result(item)
-
-                    display_position = item.get("Location", {}).get("DisplayPosition", {})
-                    if display_position:
-                        lat_val = display_position.get("Latitude")
-                        lon_val = display_position.get("Longitude")
-                        if lat_val is not None:
-                            normalized["latitude"] = float(lat_val)
-                        if lon_val is not None:
-                            normalized["longitude"] = float(lon_val)
-
-                    normalized["backend"] = self.display_name
-                    normalized["backend_name"] = self.name
-                    normalized["text"] = self._build_address_string(normalized)
-
-                    match_quality = item.get("MatchQuality", {})
-                    relevance = match_quality.get("Relevance", 0.0) or 0.0
-                    normalized["confidence"] = float(relevance)
-                    normalized["relevance"] = self._calculate_relevance(
-                        {"address_line1": query},
-                        normalized,
-                    )
-                    normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                    normalized = self._order_normalized_fields(normalized)
-                    addresses.append(normalized)
-                except Exception:
-                    continue
-
-            return addresses
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-        except Exception as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-
-    def reverse_geocode(self, latitude: float, longitude: float, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Reverse geocode coordinates to an address using Here."""
+        if latitude is None:
+            latitude = kwargs.pop('latitude', None)
+        if longitude is None:
+            longitude = kwargs.pop('longitude', None)
+        if latitude is None or longitude is None:
+            raise ValueError("latitude and longitude are required")
+
         if not self._app_id or not self._app_code:
-            if raw:
-                return {"error": "HERE_APP_ID and HERE_APP_CODE must be configured"}
-            return None
+            raise ValueError("HERE_APP_ID and HERE_APP_CODE must be configured")
+
+        self.reverse_geocode_latitude = latitude
+        self.reverse_geocode_longitude = longitude
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -189,138 +144,15 @@ class HereProvider(GeoaddressProvider):
             "maxresults": 1,
         }
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode.json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/geocode.json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        response_data = result.get("Response", {}) if isinstance(result, dict) else {}
+        view = response_data.get("View", [])
+        results_list = view[0].get("Result", []) if view else []
+        return results_list if isinstance(results_list, list) else []
 
-            if raw:
-                response_data = result.get("Response", {}) if isinstance(result, dict) else {}
-                view = response_data.get("View", [])
-                results_list = view[0].get("Result", []) if view else []
-                return results_list[0] if results_list else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            response_data = result.get("Response", {}) if isinstance(result, dict) else {}
-            view = response_data.get("View", [])
-            if not view:
-                return None
-
-            results_list = view[0].get("Result", [])
-            if not results_list:
-                return None
-
-            item = results_list[0]
-            normalized = self._extract_address_from_result(item)
-
-            normalized["latitude"] = latitude
-            normalized["longitude"] = longitude
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-
-            match_quality = item.get("MatchQuality", {})
-            relevance = match_quality.get("Relevance", 0.0) or 0.0
-            normalized["confidence"] = float(relevance)
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-
-    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
-        """Get address by reference (LocationId) using Here."""
-        if not self._app_id or not self._app_code:
-            if raw:
-                return {"error": "HERE_APP_ID and HERE_APP_CODE must be configured"}
-            return None
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
-        params = {
-            "app_id": self._app_id,
-            "app_code": self._app_code,
-            "locationid": reference,
-        }
-
-        try:
-            response = requests.get(
-                f"{self._base_url}/geocode.json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
-
-            if raw:
-                response_data = result.get("Response", {}) if isinstance(result, dict) else {}
-                view = response_data.get("View", [])
-                results_list = view[0].get("Result", []) if view else []
-                return results_list[0] if results_list else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            response_data = result.get("Response", {}) if isinstance(result, dict) else {}
-            view = response_data.get("View", [])
-            if not view:
-                return None
-
-            results_list = view[0].get("Result", [])
-            if not results_list:
-                return None
-
-            item = results_list[0]
-            normalized = self._extract_address_from_result(item)
-
-            display_position = item.get("Location", {}).get("DisplayPosition", {})
-            if display_position:
-                lat_val = display_position.get("Latitude")
-                lon_val = display_position.get("Longitude")
-                if lat_val is not None:
-                    normalized["latitude"] = float(lat_val)
-                if lon_val is not None:
-                    normalized["longitude"] = float(lon_val)
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-
-            match_quality = item.get("MatchQuality", {})
-            relevance = match_quality.get("Relevance", 0.0) or 0.0
-            normalized["confidence"] = float(relevance)
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None

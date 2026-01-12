@@ -5,6 +5,21 @@ from typing import Any
 
 from . import GeoaddressProvider
 
+OPENCAGE_SEARCH_ADDRESSES_SOURCE = {
+    'city': ['components.city', 'components.town', 'components.village'],
+    'postal_code': ['components.postcode'],
+    'county': ['components.county'],
+    'state': ['components.state', 'components.state_district'],
+    'region': ['components.region'],
+    'country_code': ['components.country_code'],
+    'country': ['components.country'],
+    'municipality': ['components.municipality'],
+    'neighbourhood': ['components.suburb', 'components.neighbourhood', 'components.quarter', 'components.district'],
+    'address_type': ['components._type'],
+    'latitude': ['geometry.lat'],
+    'longitude': ['geometry.lng'],
+}
+
 
 class OpencageProvider(GeoaddressProvider):
     name = "opencage"
@@ -20,7 +35,6 @@ class OpencageProvider(GeoaddressProvider):
     config_required = ["API_KEY"]
     cost_search_addresses = 0.00017
     cost_reverse_geocode = 0.00017
-    cost_get_address_by_reference = 0.00017
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize OpenCage provider."""
@@ -28,71 +42,36 @@ class OpencageProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.opencagedata.com/geocode/v1")
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
+        for field, source in OPENCAGE_SEARCH_ADDRESSES_SOURCE.items():
+            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
-    def _extract_address_from_result(self, result: dict[str, Any]) -> dict[str, Any]:  # noqa: C901
-
-        """Extract address components from an OpenCage result."""
-        components = result.get("components", {})
-
-        address_line1 = ""
-        if components.get("house_number") and components.get("road"):
-            address_line1 = f"{components.get('house_number')} {components.get('road')}".strip()
-        elif components.get("road"):
-            address_line1 = components.get("road", "")
-        elif result.get("formatted"):
-            formatted = result.get("formatted", "")
+    def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        house_number = components.get("house_number", "")
+        road = components.get("road", "")
+        if house_number and road:
+            return f"{house_number} {road}".strip()
+        if road:
+            return road
+        formatted = data.get("formatted", "")
+        if formatted:
             parts = formatted.split(",")
             if parts:
-                address_line1 = parts[0].strip()
+                return parts[0].strip()
+        return ""
 
-        city = components.get("city") or components.get("town") or components.get("village") or ""
-        municipality = components.get("municipality", "")
-        state = components.get("state") or components.get("state_district") or ""
-        region = components.get("region", "")
-
-        neighbourhood = (
-            components.get("suburb")
-            or components.get("neighbourhood")
-            or components.get("quarter")
-            or components.get("district")
-            or ""
-        )
-
-        address_type = components.get("_type", "")
-
-        geometry = result.get("geometry", {})
-        reference = None
-        lat_val = geometry.get("lat")
-        lon_val = geometry.get("lng")
-        if lat_val is not None and lon_val is not None:
-            reference = f"{float(lat_val)}-{float(lon_val)}"
-
-        return {
-            "address_line1": address_line1 or "",
-            "address_line2": "",
-            "address_line3": "",
-            "city": city,
-            "postal_code": components.get("postcode", ""),
-            "state": state,
-            "region": region,
-            "country_code": (
-                components.get("country_code", "").upper() if components.get("country_code") else ""
-            ),
-            "country": components.get("country", "") or "",
-            "municipality": municipality,
-            "neighbourhood": neighbourhood,
-            "address_type": address_type,
-            "reference": reference,
-        }
+    def get_normalize_country_code(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        country_code = components.get("country_code", "")
+        return country_code.upper() if country_code else ""
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Search addresses using OpenCage."""
-        raw = kwargs.pop('raw', False)
+        self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
-            if raw:
-                return [{"error": "OPENCAGE_API_KEY not configured"}]
-            return []
+            raise ValueError("OPENCAGE_API_KEY not configured")
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -111,77 +90,30 @@ class OpencageProvider(GeoaddressProvider):
         if lat is not None and lon is not None:
             params["proximity"] = f"{lat},{lon}"
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        results_list = result.get("results", []) if isinstance(result, dict) else []
+        return results_list if isinstance(results_list, list) else []
 
-            if raw:
-                results_list = result.get("results", []) if isinstance(result, dict) else []
-                return results_list if isinstance(results_list, list) else []
-
-            if isinstance(result, dict) and "error" in result:
-                return []
-
-            results_list = result.get("results", [])
-            if not isinstance(results_list, list):
-                return []
-
-            addresses = []
-            for item in results_list:
-                try:
-                    normalized = self._extract_address_from_result(item)
-
-                    geometry = item.get("geometry", {})
-                    lat_val = geometry.get("lat")
-                    lon_val = geometry.get("lng")
-                    if lat_val is not None:
-                        normalized["latitude"] = float(lat_val)
-                    if lon_val is not None:
-                        normalized["longitude"] = float(lon_val)
-
-                    if lat_val is not None and lon_val is not None:
-                        normalized["reference"] = f"{float(lat_val)}-{float(lon_val)}"
-
-                    normalized["backend"] = self.display_name
-                    normalized["backend_name"] = self.name
-                    normalized["text"] = self._build_address_string(normalized)
-
-                    confidence_value = item.get("confidence", 0)
-                    normalized["confidence"] = float(confidence_value) if confidence_value else 0.0
-                    normalized["relevance"] = self._calculate_relevance(
-                        {"address_line1": query},
-                        normalized,
-                    )
-                    normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-                    normalized = self._order_normalized_fields(normalized)
-                    addresses.append(normalized)
-                except Exception:
-                    continue
-
-            return addresses
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-        except Exception as e:
-            if raw:
-                return [{"error": str(e)}]
-            return []
-
-    def reverse_geocode(self, latitude: float, longitude: float, raw: bool = False) -> dict[str, Any] | None:  # noqa: C901
-
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
         """Reverse geocode coordinates to an address using OpenCage."""
+        if latitude is None:
+            latitude = kwargs.pop('latitude', None)
+        if longitude is None:
+            longitude = kwargs.pop('longitude', None)
+        if latitude is None or longitude is None:
+            raise ValueError("latitude and longitude are required")
+
         if not self._api_key:
-            if raw:
-                return {"error": "OPENCAGE_API_KEY not configured"}
-            return None
+            raise ValueError("OPENCAGE_API_KEY not configured")
+
+        self.reverse_geocode_latitude = latitude
+        self.reverse_geocode_longitude = longitude
 
         current_time = time.time()
         time_since_last = current_time - self._last_request_time
@@ -195,55 +127,14 @@ class OpencageProvider(GeoaddressProvider):
             "no_annotations": 0,
         }
 
-        try:
-            response = requests.get(
-                f"{self._base_url}/json",
-                params=params,
-                timeout=10,
-            )
-            response.raise_for_status()
-            result = response.json()
+        response = requests.get(
+            f"{self._base_url}/json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        results_list = result.get("results", []) if isinstance(result, dict) else []
+        return results_list if isinstance(results_list, list) else []
 
-            if raw:
-                results_list = result.get("results", []) if isinstance(result, dict) else []
-                return results_list[0] if results_list else None
-
-            if isinstance(result, dict) and "error" in result:
-                return None
-
-            results_list = result.get("results", [])
-            if not results_list:
-                return None
-
-            item = results_list[0]
-            normalized = self._extract_address_from_result(item)
-
-            normalized["latitude"] = latitude
-            normalized["longitude"] = longitude
-            normalized["reference"] = f"{latitude}-{longitude}"
-
-            normalized["backend"] = self.display_name
-            normalized["backend_name"] = self.name
-            normalized["text"] = self._build_address_string(normalized)
-
-            confidence_value = item.get("confidence", 0)
-            normalized["confidence"] = float(confidence_value) if confidence_value else 0.0
-            normalized["geoaddress_id"] = self._generate_geoaddress_id(normalized)
-            normalized = self._order_normalized_fields(normalized)
-
-            return normalized
-        except requests.exceptions.Timeout:
-            raise requests.exceptions.Timeout("Request timeout after 10 seconds")
-        except requests.exceptions.RequestException as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-        except Exception as e:
-            if raw:
-                return {"error": str(e)}
-            return None
-
-    def get_address_by_reference(self, reference: str, raw: bool = False) -> dict[str, Any] | None:
-        """Get address by reference (latitude-longitude) using reverse geocoding."""
-        return self.get_address_by_reference_latlon(reference, raw=raw)
 
