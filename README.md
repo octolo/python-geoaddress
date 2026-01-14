@@ -47,23 +47,6 @@ print(f"City: {address['city']}")
 print(f"Country: {address['country']}")
 ```
 
-#### Get Address by Reference
-
-```python
-from geoaddress import get_address_by_reference
-
-# Get address by provider-specific reference ID
-address = get_address_by_reference("ChIJN1t_tDeuEmsRUsoyG83frY4", query_string="google_maps")
-```
-
-#### Get Address by OpenStreetMap ID
-
-```python
-from geoaddress import get_address_by_osm
-
-# Get address by OpenStreetMap ID
-address = get_address_by_osm("123456789", "way")
-```
 
 ### Provider Selection
 
@@ -169,9 +152,6 @@ geoaddress reverse --lat 48.8566 --lon 2.3522
 
 # Use specific provider
 geoaddress address --query "Paris, France" --backend nominatim
-
-# Get address by reference
-geoaddress reference --ref "ChIJN1t_tDeuEmsRUsoyG83frY4" --backend google_maps
 ```
 
 ## Architecture
