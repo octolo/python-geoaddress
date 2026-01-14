@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import sys
 
+from providerkit.commands.provider import _PROVIDER_COMMAND_CONFIG
+from qualitybase.commands import parse_args_from_config
 from qualitybase.commands.base import Command
 from qualitybase.services.utils import print_header, print_separator
+
 from geoaddress.helpers import reverse_geocode
-from qualitybase.commands import parse_args_from_config
-from providerkit.commands.provider import _PROVIDER_COMMAND_CONFIG
 
 _ARG_CONFIG = {
     **_PROVIDER_COMMAND_CONFIG,
@@ -28,18 +29,18 @@ def _reverse_command(args: list[str]) -> bool:
     longitude = parsed.get('longitude')
     if longitude is None:
         longitude = parsed.get('lon')
-    
+
     if latitude is None or longitude is None:
         print("Error: --latitude and --longitude (or --lat and --lon) are required", file=sys.stderr)
         return False
-    
+
     try:
         latitude = float(latitude)
         longitude = float(longitude)
     except (ValueError, TypeError):
         print("Error: --latitude and --longitude must be valid numbers", file=sys.stderr)
         return False
-    
+
     kwargs = {}
     kwargs['attribute_search'] = parsed.get('attr', {}).get('kwargs', {})
     output_format = parsed.get('format', 'terminal')

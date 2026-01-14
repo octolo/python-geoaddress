@@ -131,7 +131,7 @@ class MapboxProvider(GeoaddressProvider):
         context = data.get("context", [])
         return self._extract_context_value(context, "neighborhood")
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Mapbox."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -164,7 +164,7 @@ class MapboxProvider(GeoaddressProvider):
         features = result.get("features", []) if isinstance(result, dict) else []
         return features if isinstance(features, list) else []
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Mapbox."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)

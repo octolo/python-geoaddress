@@ -79,7 +79,7 @@ class HereProvider(GeoaddressProvider):
         country = address.get("Country", "")
         return country.upper() if country else ""
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Here."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -115,7 +115,7 @@ class HereProvider(GeoaddressProvider):
         results_list = view[0].get("Result", []) if view else []
         return results_list if isinstance(results_list, list) else []
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Here."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)

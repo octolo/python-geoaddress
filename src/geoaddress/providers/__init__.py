@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import re
 import unicodedata
 from math import atan2, cos, radians, sin, sqrt
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from providerkit import ProviderBase
 
@@ -43,7 +42,7 @@ class GeoaddressProvider(ProviderBase):
     provider_key = "key"
     importance_key = "importance"
 
-    def insert_data_normalized(self, data_normalized: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any] | list[dict[str, Any]]:
+    def insert_data_normalized(self, data_normalized: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any] | list[dict[str, Any]]:  # noqa: C901
         raw_result = None
         service_name = None
         if hasattr(self, '_service_results_cache') and self._service_results_cache:
@@ -52,7 +51,7 @@ class GeoaddressProvider(ProviderBase):
                     service_name = svc_name
                     raw_result = svc_data['result']
                     break
-        
+
         if isinstance(data_normalized, list):
             raw_list = raw_result if isinstance(raw_result, list) else None
             for idx, item in enumerate(data_normalized):
@@ -61,8 +60,8 @@ class GeoaddressProvider(ProviderBase):
                 item["geoaddress_id"] = self._generate_geoaddress_id(item.get('latitude'), item.get('longitude'))
                 item["text"] = self._build_address_string(item)
                 for field_name, format_config in GEOADDRESS_FIELDS_FORMATS.items():
-                    item[field_name] = self.insert_text_formatted(item, format_config, field_name)
-                
+                    item[field_name] = self.insert_text_formatted(item, cast("list[Any]", format_config), field_name)
+
                 feature = raw_list[idx] if raw_list and idx < len(raw_list) else None
                 if not item.get('confidence'):
                     item['confidence'] = self._calculate_confidence(item, feature=feature, importance_key=self.importance_key)
@@ -78,8 +77,8 @@ class GeoaddressProvider(ProviderBase):
             data_normalized["geoaddress_id"] = self._generate_geoaddress_id(data_normalized.get('latitude'), data_normalized.get('longitude'))
             data_normalized["text"] = self._build_address_string(data_normalized)
             for field_name, format_config in GEOADDRESS_FIELDS_FORMATS.items():
-                data_normalized[field_name] = self.insert_text_formatted(data_normalized, format_config, field_name)
-            
+                data_normalized[field_name] = self.insert_text_formatted(data_normalized, cast("list[Any]", format_config), field_name)
+
             feature = raw_result if isinstance(raw_result, dict) else (raw_result[0] if isinstance(raw_result, list) and raw_result else None)
             if not data_normalized.get('confidence'):
                 data_normalized['confidence'] = self._calculate_confidence(data_normalized, feature=feature, importance_key=self.importance_key)
@@ -89,9 +88,9 @@ class GeoaddressProvider(ProviderBase):
                 query_lon = query_components.get('longitude')
                 data_normalized['relevance'] = self._calculate_relevance(query_components or {}, data_normalized, query_latitude=query_lat, query_longitude=query_lon)
         return data_normalized
-    
+
     def _extract_query_components(self, raw_result: Any, service_name: str | None) -> dict[str, Any]:
-        query_components = {}
+        query_components: dict[str, Any] = {}
         if service_name == "search_addresses":
             query = getattr(self, 'search_addresses_query', None)
             if not query and isinstance(raw_result, list) and raw_result:
@@ -111,8 +110,8 @@ class GeoaddressProvider(ProviderBase):
                 query_components['longitude'] = float(lon)
         return query_components
 
-    def insert_text_formatted(self, data_normalized: dict[str, Any], format_config: list, field_name: str) -> list[str] | list[list[str]]:
-        result = []
+    def insert_text_formatted(self, data_normalized: dict[str, Any], format_config: list[Any], _field_name: str) -> list[str] | list[list[str]]:
+        result: list[Any] = []
         for item in format_config:
             if isinstance(item, list):
                 group_parts = [str(data_normalized.get(field, "")) for field in item if data_normalized.get(field)]
@@ -307,7 +306,7 @@ class GeoaddressProvider(ProviderBase):
             and normalized_result.get("longitude") is not None
         )
 
-        if can_calculate_distance:
+        if can_calculate_distance and query_latitude is not None and query_longitude is not None:
             try:
                 distance_km = self._calculate_distance_km(
                     query_latitude,

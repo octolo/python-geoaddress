@@ -130,7 +130,7 @@ class GoogleMapsProvider(GeoaddressProvider):
         lng_val = location.get("lng")
         return float(lng_val) if lng_val is not None else None
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Google Maps."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -164,7 +164,7 @@ class GoogleMapsProvider(GeoaddressProvider):
         results_list = result.get("results", []) if isinstance(result, dict) else []
         return results_list if isinstance(results_list, list) else []
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Google Maps."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)

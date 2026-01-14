@@ -84,7 +84,7 @@ class PhotonProvider(GeoaddressProvider):
         osm_id = properties.get("osm_id")
         return int(osm_id) if osm_id is not None else None
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Photon."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -116,7 +116,7 @@ class PhotonProvider(GeoaddressProvider):
         features = result.get("features", []) if isinstance(result, dict) else []
         return features if isinstance(features, list) else []
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Photon."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)

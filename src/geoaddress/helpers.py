@@ -1,18 +1,20 @@
 from typing import Any
 
-from providerkit.helpers import get_providers, call_providers
+from providerkit.helpers import call_providers, get_providers
+
 from .providers import GeoaddressProvider
+
 
 def get_address_providers(*args: Any, **kwargs: Any) -> dict[str, Any] | str:
     """Get address providers."""
     lib_name = kwargs.pop('lib_name', 'geoaddress')
-    return get_providers(lib_name=lib_name, *args, **kwargs)
+    return get_providers(*args, lib_name=lib_name, **kwargs)  # type: ignore[no-any-return]
 
 
 def get_address_provider(attribute_search: dict[str, Any], *args: Any, **kwargs: Any) -> GeoaddressProvider:
     """Get address provider by attribute search."""
     lib_name = kwargs.pop('lib_name', 'geoaddress')
-    providers = get_providers(lib_name=lib_name, attribute_search=attribute_search, format="python", *args, **kwargs)
+    providers = get_providers(*args, attribute_search=attribute_search, format="python", lib_name=lib_name, **kwargs)
     if not providers:
         raise ValueError("No providers found")
     if len(providers) > 1:
@@ -23,20 +25,20 @@ def get_address_provider(attribute_search: dict[str, Any], *args: Any, **kwargs:
 def search_addresses(query: str, *args: Any, **kwargs: Any) -> Any:
     """Search addresses using providers."""
     return call_providers(
-        command="search_addresses",
-        query=query,
-        lib_name="geoaddress",
         *args,
+        command="search_addresses",
+        lib_name="geoaddress",
+        query=query,
         **kwargs,
     )
 
 def reverse_geocode(latitude: float, longitude: float, *args: Any, **kwargs: Any) -> Any:
     """Reverse geocode coordinates to address using providers."""
     return call_providers(
+        *args,
         command="reverse_geocode",
         latitude=latitude,
-        longitude=longitude,
         lib_name="geoaddress",
-        *args,
+        longitude=longitude,
         **kwargs,
     )

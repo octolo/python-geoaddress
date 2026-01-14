@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from . import GeoaddressProvider
@@ -29,7 +28,6 @@ NOMINATIM_CONFIG_FIELDS = {
     'county': '',
     'state': 'state',
     'region': 'region',
-    'country_code': 'country_code',
     'country': 'country',
     'municipality': 'administrative',
     'neighbourhood': 'neighbourhood',
@@ -84,10 +82,10 @@ class NominatimProvider(GeoaddressProvider):
         road = self._normalize_recursive(data, 'address_line1', src_rd)
         return f'{house_number} {road}'.strip()
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Nominatim."""
         self.search_addresses_query = query
-        raw = kwargs.pop('raw', False)
+        kwargs.pop('raw', False)
         proximity = kwargs.pop('proximity', None)
         params = {"q": query, "format": "json", "addressdetails": 1, "limit": 10,}
         lat, lon = self._parse_proximity(proximity)
@@ -105,7 +103,7 @@ class NominatimProvider(GeoaddressProvider):
         response.raise_for_status()
         return response.json()
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Nominatim."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)
@@ -113,10 +111,10 @@ class NominatimProvider(GeoaddressProvider):
             longitude = kwargs.pop('longitude', None)
         if latitude is None or longitude is None:
             raise ValueError("latitude and longitude are required")
-        
+
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-        
+
         params = {"lat": str(latitude), "lon": str(longitude), "format": "json", "addressdetails": 1}
         headers = {"User-Agent": self._user_agent}
         response = requests.get(

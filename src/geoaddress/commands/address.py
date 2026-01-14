@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from providerkit.commands.provider import _PROVIDER_COMMAND_CONFIG
+from qualitybase.commands import parse_args_from_config
 from qualitybase.commands.base import Command
 from qualitybase.services.utils import print_header, print_separator
+
 from geoaddress.helpers import search_addresses
-from qualitybase.commands import parse_args_from_config
-from providerkit.commands.provider import _PROVIDER_COMMAND_CONFIG
 
 _ARG_CONFIG = {
     **_PROVIDER_COMMAND_CONFIG,

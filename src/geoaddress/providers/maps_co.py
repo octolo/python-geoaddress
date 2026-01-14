@@ -65,7 +65,7 @@ class MapsCoProvider(GeoaddressProvider):
         road = self._normalize_recursive(data, 'address_line1', src_rd)
         return f'{house_number} {road}'.strip()
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Maps.co."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -95,7 +95,7 @@ class MapsCoProvider(GeoaddressProvider):
         response.raise_for_status()
         return response.json()
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Maps.co."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)
@@ -103,7 +103,7 @@ class MapsCoProvider(GeoaddressProvider):
             longitude = kwargs.pop('longitude', None)
         if latitude is None or longitude is None:
             raise ValueError("latitude and longitude are required")
-        
+
         if not self._api_key:
             raise ValueError("MAPS_CO_API_KEY not configured")
 

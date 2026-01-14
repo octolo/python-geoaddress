@@ -66,7 +66,7 @@ class OpencageProvider(GeoaddressProvider):
         country_code = components.get("country_code", "")
         return country_code.upper() if country_code else ""
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using OpenCage."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -100,7 +100,7 @@ class OpencageProvider(GeoaddressProvider):
         results_list = result.get("results", []) if isinstance(result, dict) else []
         return results_list if isinstance(results_list, list) else []
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using OpenCage."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)

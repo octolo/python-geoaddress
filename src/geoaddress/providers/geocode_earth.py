@@ -68,7 +68,7 @@ class GeocodeEarthProvider(GeoaddressProvider):
         country_a = properties.get("country_a", "")
         return country_a.upper() if country_a else ""
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Geocode Earth."""
         self.search_addresses_query = query
         proximity = kwargs.pop('proximity', None)
@@ -102,7 +102,7 @@ class GeocodeEarthProvider(GeoaddressProvider):
         features = result.get("features", []) if isinstance(result, dict) else []
         return features if isinstance(features, list) else []
 
-    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901
+    def reverse_geocode(self, latitude: float | None = None, longitude: float | None = None, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Reverse geocode coordinates to an address using Geocode Earth."""
         if latitude is None:
             latitude = kwargs.pop('latitude', None)
