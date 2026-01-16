@@ -2,7 +2,7 @@ from typing import Any
 
 from providerkit.helpers import call_providers, get_providers
 
-from .providers import GeoaddressProvider
+from .providers.base import GeoaddressProvider
 
 
 def get_address_providers(*args: Any, **kwargs: Any) -> dict[str, Any] | str:

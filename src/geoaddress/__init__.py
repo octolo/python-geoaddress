@@ -174,7 +174,6 @@ GEOADDRESS_FIELDS_SEARCH = {
     "confidence": GEOADDRESS_FIELDS_EXTENDED["confidence"],
     "relevance": GEOADDRESS_FIELDS_EXTENDED["relevance"],
     "geoaddress_id": GEOADDRESS_FIELDS_EXTENDED["geoaddress_id"],
-
 }
 
 __all__ = [

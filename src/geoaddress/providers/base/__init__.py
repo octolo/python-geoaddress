@@ -124,15 +124,22 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
                 query_components['longitude'] = float(lon)
         return query_components
 
-    def insert_text_formatted(self, data_normalized: dict[str, Any], format_config: list[Any], _field_name: str) -> list[str] | list[list[str]]:
+    def insert_text_formatted(self, data: Any, normalized: dict[str, Any], format_config: list[Any]) -> list[str] | list[list[str]]:
         result: list[Any] = []
+        config = self.services_cfg.get("addresses_autocomplete", {})
         for item in format_config:
             if isinstance(item, list):
-                group_parts = [str(data_normalized.get(field, "")) for field in item if data_normalized.get(field)]
+                group_parts = self.insert_text_formatted(data, normalized, item)
                 if group_parts:
                     result.append(group_parts)
             else:
-                value = data_normalized.get(item)
+                field_cfg = config.get('fields', {}).get(item, {})
+                if item in normalized:
+                    value = normalized[item]
+                elif hasattr(self, f'get_normalize_{item}') and callable(getattr(self, f'get_normalize_{item}')):
+                    value = getattr(self, f'get_normalize_{item}')(data)
+                else:
+                    value = self._normalize_recursive(data, item, field_cfg.get('source'))
                 if value:
                     result.append(str(value))
         return result if result else []
@@ -190,6 +197,63 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
             pass
 
         return None, None
+
+    def get_insert_normalized_relevance(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        service_name = getattr(self, 'current_service_name', None)
+        raw_result = None
+        if hasattr(self, '_service_results_cache') and service_name:
+            raw_result = self._service_results_cache.get(service_name, {}).get('result')
+        
+        query_components = self._extract_query_components(raw_result, service_name)
+        query_lat = query_components.get('latitude')
+        query_lon = query_components.get('longitude')
+        
+        cfg = self.services_cfg.get(service_name or "addresses_autocomplete", {})
+        result_latitude = self._normalize_recursive(data, 'latitude', cfg.get('fields', {}).get('latitude', {}).get('source'))
+        result_longitude = self._normalize_recursive(data, 'longitude', cfg.get('fields', {}).get('longitude', {}).get('source'))
+        
+        normalized_result = {
+            'address_line1': normalized.get('address_line1', ''),
+            'postal_code': normalized.get('postal_code', ''),
+            'city': normalized.get('city', ''),
+            'latitude': result_latitude,
+            'longitude': result_longitude,
+        }
+        
+        return self._calculate_relevance(query_components or {}, normalized_result, query_latitude=query_lat, query_longitude=query_lon)
+
+    def get_insert_normalized_confidence(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        service_name = getattr(self, 'current_service_name', None)
+        cfg = self.services_cfg.get(service_name or "addresses_autocomplete", {})
+        return self._calculate_confidence(data=data, config=cfg, feature=data, importance_key=self.importance_key)
+
+    def get_insert_normalized_backend(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        return self.name
+
+    def get_insert_normalized_backend_name(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        return self.display_name
+
+    def get_insert_normalized_text_aligned(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        format_config = GEOADDRESS_FIELDS_FORMATS["text_aligned"]
+        return self.insert_text_formatted(data, normalized, format_config)
+
+    def get_insert_normalized_text_2lines(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        format_config = GEOADDRESS_FIELDS_FORMATS["text_2lines"]
+        return self.insert_text_formatted(data, normalized, format_config)
+
+    def get_insert_normalized_text_3lines(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        format_config = GEOADDRESS_FIELDS_FORMATS["text_3lines"]
+        return self.insert_text_formatted(data, normalized, format_config)
+
+    def get_insert_normalized_text_full(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        format_config = GEOADDRESS_FIELDS_FORMATS["text_full"]
+        return self.insert_text_formatted(data, normalized, format_config)
+
+    def get_insert_normalized_geoaddress_id(self, data: Any, normalized: dict[str, Any], config: dict[str, Any]) -> float | None:
+        cfg = self.services_cfg.get("addresses_autocomplete", {})
+        latitude = self._normalize_recursive(data, 'latitude', cfg['fields'].get('latitude').get('source'))
+        longitude = self._normalize_recursive(data, 'longitude', cfg['fields'].get('longitude').get('source'))
+        return self._generate_geoaddress_id(latitude, longitude)
 
     def _generate_geoaddress_id(self, latitude: float | None, longitude: float | None) -> str:
         if latitude is None or longitude is None:

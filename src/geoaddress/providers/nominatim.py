@@ -5,6 +5,7 @@ from typing import Any
 from .base import GeoaddressProvider
 
 NOMINATIM_ADDRESSES_AUTOCOMPLETE_SOURCE = {
+    'text': ['display_name'],
     'city': ['address.city', 'address.town', 'address.village'],
     'postal_code': ['address.postcode'],
     'county': ['address.county', 'county'],

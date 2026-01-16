@@ -32,13 +32,23 @@ class ConfidenceMixin:
             pass
         return None
 
-    def _calculate_confidence_heuristic(self, normalized: dict[str, Any]) -> float:
+    def _calculate_confidence_heuristic(self, data: Any, config: dict[str, Any]) -> float:
         """Calculate confidence using heuristic rules."""
-        address_line1 = normalized.get("address_line1") or ""
-        city = normalized.get("city") or ""
-        postal_code = normalized.get("postal_code") or ""
+        if isinstance(data, dict) and config and 'fields' in config:
+            cfg = config.get('fields', {})
+            address_line1 = self._normalize_recursive(data, 'address_line1', cfg.get('address_line1', {}).get('source')) or ""
+            city = self._normalize_recursive(data, 'city', cfg.get('city', {}).get('source')) or ""
+            postal_code = self._normalize_recursive(data, 'postal_code', cfg.get('postal_code', {}).get('source')) or ""
+        elif isinstance(data, dict):
+            address_line1 = data.get("address_line1") or ""
+            city = data.get("city") or ""
+            postal_code = data.get("postal_code") or ""
+        else:
+            address_line1 = ""
+            city = ""
+            postal_code = ""
 
-        if address_line1 and any(c.isdigit() for c in address_line1):
+        if address_line1 and any(c.isdigit() for c in str(address_line1)):
             return 90.0
         if address_line1:
             return 70.0
@@ -48,14 +58,16 @@ class ConfidenceMixin:
 
     def _calculate_confidence(
         self,
-        normalized: dict[str, Any],
+        normalized: dict[str, Any] | None = None,
         feature: dict[str, Any] | None = None,
         importance_key: str | None = None,
         importance_multiplier: float = 2.0,
+        data: Any = None,
+        config: dict[str, Any] | None = None,
     ) -> float:
         """Calculate confidence score for normalized address data."""
-        if not isinstance(normalized, dict):
-            normalized = {}
+        if feature is None and data is not None:
+            feature = data if isinstance(data, dict) else None
 
         importance = self._extract_importance(feature, importance_key)
         if importance is None and feature:
@@ -66,5 +78,10 @@ class ConfidenceMixin:
             if confidence is not None:
                 return confidence
 
-        base_conf = self._calculate_confidence_heuristic(normalized)
+        if data is not None and config is not None:
+            base_conf = self._calculate_confidence_heuristic(data, config)
+        elif normalized is not None:
+            base_conf = self._calculate_confidence_heuristic(normalized, {})
+        else:
+            base_conf = 30.0
         return self._round_score(base_conf)
