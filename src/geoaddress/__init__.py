@@ -95,6 +95,7 @@ GEOADDRESS_FIELDS_FORMATS = {
         ["city", "postal_code", "county", "state", "region"],
         ["country", "country_code"],
     ],
+    "text_full": list(GEOADDRESS_FIELDS_ESSENTIALS.keys()),
 }
 
 GEOADDRESS_FIELDS_EXTENDED = {
@@ -116,6 +117,11 @@ GEOADDRESS_FIELDS_EXTENDED = {
     "text_3lines": {
         "label": "Full formatted address string (3 lines)",
         "description": "Full formatted address string (3 lines)",
+        "format": "text",
+    },
+    "text_full": {
+        "label": "Full formatted address string (full)",
+        "description": "Full formatted address string (full)",
         "format": "text",
     },
     "address_type": {

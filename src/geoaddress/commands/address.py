@@ -22,7 +22,9 @@ def _address_command(args: list[str]) -> bool:
     output_format = parsed.get('format', 'terminal')
     raw = parsed.get('raw', False)
     query = parsed.pop('query')
-    pvs_addresses = search_addresses(query, **kwargs)
+    first = parsed.pop('first', False)
+    print("first", first)
+    pvs_addresses = search_addresses(query, first=first, **kwargs)
     for pv in pvs_addresses:
         print_separator()
         print_header(pv['provider'].name)

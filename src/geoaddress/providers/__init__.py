@@ -24,7 +24,7 @@ class GeoaddressProvider(ProviderBase):
     config_defaults: dict[str, Any] = {}
     config_required: list[str] = []
     config_prefix = "GEOADDRESS"
-    services_cfg = {
+    _default_services_cfg = {
         "search_addresses": {
             "label": "Search addresses",
             "description": "Search addresses",
@@ -346,29 +346,6 @@ class GeoaddressProvider(ProviderBase):
             if part
         ]
         return ", ".join(parts)
-
-    def _normalize_from_mapping(self, data: dict[str, Any], mapping: dict[str, str | Any]) -> dict[str, Any]:
-        """Normalize data using field mapping. Mapping values can be paths (str with dots), callables, or constants."""
-        normalized: dict[str, Any] = {}
-        for target_field in self.fields_descriptions:
-            if target_field not in mapping:
-                continue
-            source = mapping[target_field]
-            if callable(source):
-                normalized[target_field] = source(data)
-            elif isinstance(source, str) and "." in source:
-                normalized[target_field] = self._get_nested_value(data, source)
-            else:
-                normalized[target_field] = source
-        return normalized
-
-    def _order_normalized_fields(self, normalized: dict[str, Any]) -> dict[str, Any]:
-        """Reorder normalized fields according to fields_descriptions order."""
-        ordered: dict[str, Any] = {}
-        for field in self.fields_descriptions:
-            if field in normalized:
-                ordered[field] = normalized[field]
-        return ordered
 
     def _parse_proximity(self, proximity: str | None) -> tuple[float | None, float | None]:
         """Parse proximity string to extract latitude and longitude."""

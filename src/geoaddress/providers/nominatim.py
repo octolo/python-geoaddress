@@ -21,22 +21,6 @@ NOMINATIM_SEARCH_ADDRESSES_SOURCE = {
     'osm_type': ['osm_type'],
 }
 
-NOMINATIM_CONFIG_FIELDS = {
-    'country_code': 'country_code',
-    'city': 'city',
-    'postal_code': 'postal_code',
-    'county': '',
-    'state': 'state',
-    'region': 'region',
-    'country': 'country',
-    'municipality': 'administrative',
-    'neighbourhood': 'neighbourhood',
-    'address_type': 'address_type',
-    'latitude': 'latitude',
-    'longitude': 'longitude',
-    'osm_id': 'osm_id',
-    'osm_type': 'osm_type',
-}
 
 
 class NominatimProvider(GeoaddressProvider):
@@ -59,9 +43,12 @@ class NominatimProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://nominatim.openstreetmap.org")
         self._user_agent = self._get_config_or_env("USER_AGENT", "python-geoaddress/1.0")
         self._last_request_time = 0.0
+        # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in NOMINATIM_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
-            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
+                self.services_cfg['search_addresses']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
+                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
         return (
