@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-NOMINATIM_SEARCH_ADDRESSES_SOURCE = {
+NOMINATIM_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['address.city', 'address.town', 'address.village'],
     'postal_code': ['address.postcode'],
     'county': ['address.county', 'county'],
@@ -44,11 +44,13 @@ class NominatimProvider(GeoaddressProvider):
         self._user_agent = self._get_config_or_env("USER_AGENT", "python-geoaddress/1.0")
         self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
-        for field, source in NOMINATIM_SEARCH_ADDRESSES_SOURCE.items():
-            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
-                self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in NOMINATIM_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
+                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
                 self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
+                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
         return (
@@ -70,8 +72,29 @@ class NominatimProvider(GeoaddressProvider):
         return f'{house_number} {road}'.strip()
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
-        """Search addresses using Nominatim."""
-        self.search_addresses_query = query
+        """Autocomplete addresses using Nominatim."""
+        self.addresses_autocomplete_query = query
+        kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
+        params = {"q": query, "format": "json", "addressdetails": 1, "limit": 10,}
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["lat"] = str(lat)
+            params["lon"] = str(lon)
+
+        headers = {"User-Agent": self._user_agent}
+        response = requests.get(
+            f"{self._base_url}/search",
+            params=params,
+            headers=headers,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Autocomplete addresses using Nominatim."""
+        self.addresses_autocomplete_query = query
         kwargs.pop('raw', False)
         proximity = kwargs.pop('proximity', None)
         params = {"q": query, "format": "json", "addressdetails": 1, "limit": 10,}

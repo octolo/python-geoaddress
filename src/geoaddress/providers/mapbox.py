@@ -4,9 +4,9 @@ import time
 import urllib.parse
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-MAPBOX_SEARCH_ADDRESSES_SOURCE = {
+MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['context.place'],
     'postal_code': ['context.postcode'],
     'county': ['context.county'],
@@ -31,7 +31,7 @@ class MapboxProvider(GeoaddressProvider):
     site_url = "https://www.mapbox.com"
     config_keys = ["ACCESS_TOKEN"]
     config_required = ["ACCESS_TOKEN"]
-    cost_search_addresses = 0.0005
+    cost_addresses_autocomplete = 0.0005
     cost_reverse_geocode = 0.0005
 
     def __init__(self, **kwargs: str | None) -> None:
@@ -40,8 +40,8 @@ class MapboxProvider(GeoaddressProvider):
         self._base_url = "https://api.mapbox.com"
         self._access_token = self._get_config_or_env("ACCESS_TOKEN")
         self._last_request_time = 0.0
-        for field, source in MAPBOX_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def _extract_context_value(self, context: list[dict[str, Any]], prefix: str) -> str:
@@ -131,9 +131,9 @@ class MapboxProvider(GeoaddressProvider):
         context = data.get("context", [])
         return self._extract_context_value(context, "neighborhood")
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Mapbox."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._access_token:
             raise ValueError("MAPBOX_ACCESS_TOKEN not configured")

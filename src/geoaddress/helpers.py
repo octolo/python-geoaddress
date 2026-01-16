@@ -21,12 +21,21 @@ def get_address_provider(attribute_search: dict[str, Any], *args: Any, **kwargs:
         raise ValueError(f"Expected 1 provider, got {len(providers)}")
     return providers[0]  # type: ignore[no-any-return]
 
-
 def search_addresses(query: str, *args: Any, **kwargs: Any) -> Any:
     """Search addresses using providers."""
     return call_providers(
         *args,
         command="search_addresses",
+        lib_name="geoaddress",
+        query=query,
+        **kwargs,
+    )
+
+def addresses_autocomplete(query: str, *args: Any, **kwargs: Any) -> Any:
+    """Search addresses using providers."""
+    return call_providers(
+        *args,
+        command="addresses_autocomplete",
         lib_name="geoaddress",
         query=query,
         **kwargs,

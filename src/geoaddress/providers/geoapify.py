@@ -3,9 +3,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-GEOAPIFY_SEARCH_ADDRESSES_SOURCE = {
+GEOAPIFY_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['properties.city', 'properties.town', 'properties.village'],
     'postal_code': ['properties.postcode'],
     'county': ['properties.county'],
@@ -33,7 +33,7 @@ class GeoapifyProvider(GeoaddressProvider):
         "BASE_URL": "https://api.geoapify.com/v1",
     }
     config_required = ["API_KEY"]
-    cost_search_addresses = 0.0002
+    cost_addresses_autocomplete = 0.0002
     cost_reverse_geocode = 0.0002
 
     def __init__(self, **kwargs: str | None) -> None:
@@ -42,8 +42,8 @@ class GeoapifyProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.geoapify.com/v1")
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
-        for field, source in GEOAPIFY_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in GEOAPIFY_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
@@ -69,7 +69,40 @@ class GeoapifyProvider(GeoaddressProvider):
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Geoapify."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
+        proximity = kwargs.pop('proximity', None)
+        if not self._api_key:
+            raise ValueError("API_KEY not configured")
+
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < 0.1:
+            time.sleep(0.1 - time_since_last)
+        self._last_request_time = time.time()
+
+        params = {
+            "apiKey": self._api_key,
+            "text": query,
+            "limit": 10,
+        }
+
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["bias"] = f"proximity:{lon},{lat}"
+
+        response = requests.get(
+            f"{self._base_url}/geocode/search",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        features = result.get("features", []) if isinstance(result, dict) else []
+        return features if isinstance(features, list) else []
+
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Autocomplete addresses using Geoapify."""
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("API_KEY not configured")

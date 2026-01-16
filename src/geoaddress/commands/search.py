@@ -15,7 +15,7 @@ _ARG_CONFIG = {
 }
 
 
-def _address_command(args: list[str]) -> bool:
+def _search_command(args: list[str]) -> bool:
     parsed = parse_args_from_config(args, _ARG_CONFIG, prog='address')
     kwargs = {}
     kwargs['attribute_search'] = parsed.get('attr', {}).get('kwargs', {})
@@ -23,7 +23,6 @@ def _address_command(args: list[str]) -> bool:
     raw = parsed.get('raw', False)
     query = parsed.pop('query')
     first = parsed.pop('first', False)
-    print("first", first)
     pvs_addresses = search_addresses(query, first=first, **kwargs)
     for pv in pvs_addresses:
         print_separator()
@@ -33,4 +32,4 @@ def _address_command(args: list[str]) -> bool:
     return True
 
 
-address_command = Command(_address_command, "Search addresses (use --query query_string)")
+search_command = Command(_search_command, "Search addresses (use --query query_string)")

@@ -3,9 +3,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-PHOTON_SEARCH_ADDRESSES_SOURCE = {
+PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['properties.city', 'properties.town', 'properties.village'],
     'postal_code': ['properties.postcode'],
     'county': ['properties.county'],
@@ -44,8 +44,8 @@ class PhotonProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://photon.komoot.io")
         self._user_agent = self._get_config_or_env("USER_AGENT", "python-geoaddress/1.0")
         self._last_request_time = 0.0
-        for field, source in PHOTON_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
@@ -84,9 +84,9 @@ class PhotonProvider(GeoaddressProvider):
         osm_id = properties.get("osm_id")
         return int(osm_id) if osm_id is not None else None
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Photon."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         current_time = time.time()
         time_since_last = current_time - self._last_request_time

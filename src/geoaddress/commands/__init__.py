@@ -1,5 +1,6 @@
-from .address import address_command
+from .autocomplete import autocomplete_command
+from .search import search_command
 from .reverse import reverse_command
 
-__all__ = ["address_command", "reverse_command"]
+__all__ = ["autocomplete_command", "search_command", "reverse_command"]
 

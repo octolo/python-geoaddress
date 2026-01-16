@@ -3,9 +3,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-LOCATIONIQ_SEARCH_ADDRESSES_SOURCE = {
+LOCATIONIQ_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['address.city', 'address.town', 'address.village'],
     'postal_code': ['address.postcode'],
     'county': ['address.county'],
@@ -35,7 +35,7 @@ class LocationIQProvider(GeoaddressProvider):
         "BASE_URL": "https://api.locationiq.com/v1",
     }
     config_required = ["API_KEY"]
-    cost_search_addresses = 0.00013
+    cost_addresses_autocomplete = 0.00013
     cost_reverse_geocode = 0.00013
 
     def __init__(self, **kwargs: str | None) -> None:
@@ -44,8 +44,8 @@ class LocationIQProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.locationiq.com/v1")
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
-        for field, source in LOCATIONIQ_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in LOCATIONIQ_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
@@ -67,9 +67,9 @@ class LocationIQProvider(GeoaddressProvider):
         road = self._normalize_recursive(data, 'address_line1', src_rd)
         return f'{house_number} {road}'.strip()
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using LocationIQ."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("LOCATIONIQ_API_KEY not configured")

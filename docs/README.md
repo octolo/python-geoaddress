@@ -34,7 +34,7 @@ When creating a new provider:
 - [ ] Define `name`, `display_name`, and `description`
 - [ ] Set `required_packages` if needed
 - [ ] Configure `config_keys`, `config_defaults`, and `config_required`
-- [ ] Implement `search_addresses()` method
+- [ ] Implement `addresses_autocomplete()` method
 - [ ] Implement `reverse_geocode()` method
 - [ ] Map provider response to standard geoaddress format
 - [ ] Handle errors gracefully

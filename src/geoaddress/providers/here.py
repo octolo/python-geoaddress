@@ -3,9 +3,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-HERE_SEARCH_ADDRESSES_SOURCE = {
+HERE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['Location.Address.City'],
     'postal_code': ['Location.Address.PostalCode'],
     'county': ['Location.Address.County'],
@@ -30,7 +30,7 @@ class HereProvider(GeoaddressProvider):
     site_url = "https://developer.here.com"
     config_keys = ["APP_ID", "APP_CODE"]
     config_required = ["APP_ID", "APP_CODE"]
-    cost_search_addresses = 0.001
+    cost_addresses_autocomplete = 0.001
     cost_reverse_geocode = 0.001
 
     def __init__(self, **kwargs: str | None) -> None:
@@ -40,8 +40,8 @@ class HereProvider(GeoaddressProvider):
         self._app_id = self._get_config_or_env("APP_ID")
         self._app_code = self._get_config_or_env("APP_CODE")
         self._last_request_time = 0.0
-        for field, source in HERE_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in HERE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
@@ -79,9 +79,9 @@ class HereProvider(GeoaddressProvider):
         country = address.get("Country", "")
         return country.upper() if country else ""
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Here."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._app_id or not self._app_code:
             raise ValueError("HERE_APP_ID and HERE_APP_CODE must be configured")

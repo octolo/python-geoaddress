@@ -24,10 +24,10 @@ Geoaddress provides a unified interface to multiple geocoding providers through 
 #### Search Addresses
 
 ```python
-from geoaddress import search_addresses
+from geoaddress import addresses_autocomplete
 
 # Search for addresses using available providers
-results = search_addresses("1600 Amphitheatre Parkway, Mountain View, CA")
+results = addresses_autocomplete("1600 Amphitheatre Parkway, Mountain View, CA")
 
 # Results include addresses from all available providers
 for result in results:
@@ -53,16 +53,16 @@ print(f"Country: {address['country']}")
 You can specify which providers to use:
 
 ```python
-from geoaddress import search_addresses
+from geoaddress import addresses_autocomplete
 
 # Use only Nominatim provider
-results = search_addresses(
+results = addresses_autocomplete(
     "Paris, France",
     query_string="nominatim"
 )
 
 # Use multiple specific providers
-results = search_addresses(
+results = addresses_autocomplete(
     "Paris, France",
     query_string="nominatim|photon"
 )
@@ -78,22 +78,22 @@ Providers can be configured via environment variables or configuration files:
 # GOOGLE_MAPS_API_KEY=your-api-key
 # MAPBOX_ACCESS_TOKEN=your-token
 
-from geoaddress import search_addresses
+from geoaddress import addresses_autocomplete
 
 # Providers automatically use environment variables
-results = search_addresses("Paris, France")
+results = addresses_autocomplete("Paris, France")
 ```
 
 ### Loading Providers from Configuration
 
 ```python
-from geoaddress import get_address_providers, search_addresses
+from geoaddress import get_address_providers, addresses_autocomplete
 
 # Load providers from JSON configuration
 providers = get_address_providers(json="providers.json")
 
 # Use specific providers
-results = search_addresses("Paris, France", providers=providers)
+results = addresses_autocomplete("Paris, France", providers=providers)
 ```
 
 ## Supported Providers

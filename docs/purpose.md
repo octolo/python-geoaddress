@@ -38,7 +38,7 @@ The library uses a provider-based architecture built on ProviderKit:
 
 All providers implement the following services:
 
-- **`search_addresses`**: Search for addresses by query string
+- **`addresses_autocomplete`**: Search for addresses by query string
 - **`reverse_geocode`**: Convert coordinates (lat/lon) to address
 
 ### Supported Providers

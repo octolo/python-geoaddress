@@ -3,9 +3,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-GOOGLE_SEARCH_ADDRESSES_SOURCE = {
+GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['address_components.locality', 'address_components.postal_town'],
     'postal_code': ['address_components.postal_code'],
     'county': ['address_components.administrative_area_level_2'],
@@ -30,7 +30,7 @@ class GoogleMapsProvider(GeoaddressProvider):
     site_url = "https://developers.google.com/maps"
     config_keys = ["API_KEY"]
     config_required = ["API_KEY"]
-    cost_search_addresses = 0.005
+    cost_addresses_autocomplete = 0.005
     cost_reverse_geocode = 0.005
 
     def __init__(self, **kwargs: str | None) -> None:
@@ -39,8 +39,8 @@ class GoogleMapsProvider(GeoaddressProvider):
         self._base_url = "https://maps.googleapis.com/maps/api"
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
-        for field, source in GOOGLE_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def _extract_component_by_type(self, address_components: list[dict[str, Any]], types_list: list[str]) -> dict[str, str]:
@@ -130,9 +130,9 @@ class GoogleMapsProvider(GeoaddressProvider):
         lng_val = location.get("lng")
         return float(lng_val) if lng_val is not None else None
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Google Maps."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("GOOGLE_MAPS_API_KEY not configured")

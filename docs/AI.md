@@ -227,13 +227,13 @@ class MyProvider(GeoaddressProvider):
     config_defaults = {"MY_PROVIDER_API_KEY": None}
     config_required = ["MY_PROVIDER_API_KEY"]
     config_prefix = "MY_PROVIDER"
-    services = ["search_addresses", "reverse_geocode"]
+    services = ["addresses_autocomplete", "reverse_geocode"]
 ```
 
 ### Required Services
 
 All providers must implement:
-- `search_addresses(query: str, **kwargs)`: Search for addresses by query string
+- `addresses_autocomplete(query: str, **kwargs)`: Search for addresses by query string
 - `reverse_geocode(latitude: float, longitude: float, **kwargs)`: Convert coordinates to address
 
 ### Address Format Standardization

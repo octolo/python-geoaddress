@@ -24,7 +24,7 @@ python-geoaddress/
 │       │   └── google.py     # Google provider
 │       ├── commands/         # Command infrastructure
 │       │   └── address.py    # Address command
-│       ├── helpers.py        # Helper functions (get_address_providers, search_addresses, etc.)
+│       ├── helpers.py        # Helper functions (get_address_providers, addresses_autocomplete, etc.)
 │       ├── cli.py            # CLI interface
 │       └── __main__.py       # Entry point for package execution
 ├── tests/                    # Test suite
@@ -51,7 +51,7 @@ The `providers/` directory contains address provider implementations:
 - **`__init__.py`**: Defines `GeoaddressProvider` base class that extends `ProviderBase` from ProviderKit
 - Each provider file (e.g., `nominatim.py`, `google_maps.py`) implements a specific geocoding service
 - All providers inherit from `GeoaddressProvider` which provides common functionality
-- Providers implement services: `search_addresses`, `reverse_geocode`
+- Providers implement services: `addresses_autocomplete`, `reverse_geocode`
 
 ### Available Providers
 
@@ -73,7 +73,7 @@ The `providers/` directory contains address provider implementations:
 
 The `helpers.py` module provides:
 - `get_address_providers()`: Get address providers from various sources
-- `search_addresses()`: Search addresses using providers
+- `addresses_autocomplete()`: Search addresses using providers
 - `reverse_geocode()`: Reverse geocoding (coordinates → address)
 
 ### Package Exports

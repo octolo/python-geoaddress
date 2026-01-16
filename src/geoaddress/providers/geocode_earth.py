@@ -3,9 +3,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import GeoaddressProvider
+from .base import GeoaddressProvider
 
-GEOCODE_EARTH_SEARCH_ADDRESSES_SOURCE = {
+GEOCODE_EARTH_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'city': ['properties.locality', 'properties.localadmin', 'properties.county'],
     'postal_code': ['properties.postalcode'],
     'county': ['properties.county'],
@@ -33,7 +33,7 @@ class GeocodeEarthProvider(GeoaddressProvider):
         "BASE_URL": "https://api.geocode.earth/v1",
     }
     config_required = ["API_KEY"]
-    cost_search_addresses = 0.00015
+    cost_addresses_autocomplete = 0.00015
     cost_reverse_geocode = 0.00015
 
     def __init__(self, **kwargs: str | None) -> None:
@@ -43,8 +43,8 @@ class GeocodeEarthProvider(GeoaddressProvider):
         api_key = self._get_config_or_env("API_KEY")
         self._api_key = api_key.strip() if api_key else None
         self._last_request_time = 0.0
-        for field, source in GEOCODE_EARTH_SEARCH_ADDRESSES_SOURCE.items():
-            self.services_cfg['search_addresses']['fields'][field]['source'] = source
+        for field, source in GEOCODE_EARTH_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
+            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
@@ -68,9 +68,9 @@ class GeocodeEarthProvider(GeoaddressProvider):
         country_a = properties.get("country_a", "")
         return country_a.upper() if country_a else ""
 
-    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+    def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Geocode Earth."""
-        self.search_addresses_query = query
+        self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("GEOCODE_EARTH_API_KEY not configured")
