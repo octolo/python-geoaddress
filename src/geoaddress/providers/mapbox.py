@@ -49,7 +49,7 @@ class MapboxProvider(GeoaddressProvider):
         for item in context:
             item_id = item.get("id", "")
             if item_id.startswith(prefix):
-                return item.get("text", "")  # type: ignore[no-any-return]
+                return str(item.get("text", ""))
         return ""
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:

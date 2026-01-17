@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unicodedata
 from math import atan2, cos, radians, sin, sqrt
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -10,6 +10,11 @@ if TYPE_CHECKING:
 
 class RelevanceMixin:
     """Mixin for relevance calculation methods."""
+
+    @staticmethod
+    def _round_score(score: float) -> float:
+        """Round score to 2 decimal places."""
+        return round(score, 2)
 
     @staticmethod
     def _normalize_string_for_comparison(text: str | None) -> str:
@@ -69,10 +74,10 @@ class RelevanceMixin:
         ]
 
         for rule in field_rules:
-            q_keys: list[str] = rule["query_key"] if isinstance(rule["query_key"], list) else [rule["query_key"]]  # type: ignore[assignment]
-            r_keys: list[str] = rule["result_key"] if isinstance(rule["result_key"], list) else [rule["result_key"]]  # type: ignore[assignment]
-            weight_key: str = rule["weight_key"]  # type: ignore[assignment]
-            match_type: str = rule["match_type"]  # type: ignore[assignment]
+            q_keys: list[str] = cast(list[str], rule["query_key"]) if isinstance(rule["query_key"], list) else [cast(str, rule["query_key"])]
+            r_keys: list[str] = cast(list[str], rule["result_key"]) if isinstance(rule["result_key"], list) else [cast(str, rule["result_key"])]
+            weight_key: str = cast(str, rule["weight_key"])
+            match_type: str = cast(str, rule["match_type"])
 
             q_value = next((query_components.get(k) for k in q_keys if query_components.get(k)), "")
             extract_func: Callable[[], str] | None = rule.get("extract_from_query")

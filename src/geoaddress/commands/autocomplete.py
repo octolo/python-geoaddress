@@ -23,7 +23,6 @@ def _autocomplete_command(args: list[str]) -> bool:
     raw = parsed.get('raw', False)
     query = parsed.pop('query')
     first = parsed.pop('first', False)
-    print("first", first)
     pvs_addresses = addresses_autocomplete(query, first=first, **kwargs)
     for pv in pvs_addresses:
         print_separator()

@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 
 class ConfidenceMixin:
     """Mixin for confidence calculation methods."""
+
+    @staticmethod
+    def _round_score(score: float) -> float:
+        """Round score to 2 decimal places."""
+        return round(score, 2)
 
     def _extract_importance(self, feature: dict[str, Any] | None, importance_key: str | None) -> float | None:
         """Extract importance value from feature."""
@@ -17,7 +22,7 @@ class ConfidenceMixin:
             val = val.get(k) if isinstance(val, dict) else None
             if val is None:
                 return None
-        return val  # type: ignore[no-any-return]
+        return cast(float, val)
 
     def _calculate_confidence_from_importance(self, importance: float, multiplier: float) -> float | None:
         """Calculate confidence from importance value."""
@@ -36,9 +41,10 @@ class ConfidenceMixin:
         """Calculate confidence using heuristic rules."""
         if isinstance(data, dict) and config and 'fields' in config:
             cfg = config.get('fields', {})
-            address_line1 = self._normalize_recursive(data, 'address_line1', cfg.get('address_line1', {}).get('source')) or ""
-            city = self._normalize_recursive(data, 'city', cfg.get('city', {}).get('source')) or ""
-            postal_code = self._normalize_recursive(data, 'postal_code', cfg.get('postal_code', {}).get('source')) or ""
+            normalize_func = getattr(self, '_normalize_recursive', lambda d, f, _s: d.get(f) if isinstance(d, dict) else None)
+            address_line1 = normalize_func(data, 'address_line1', cfg.get('address_line1', {}).get('source')) or ""
+            city = normalize_func(data, 'city', cfg.get('city', {}).get('source')) or ""
+            postal_code = normalize_func(data, 'postal_code', cfg.get('postal_code', {}).get('source')) or ""
         elif isinstance(data, dict):
             address_line1 = data.get("address_line1") or ""
             city = data.get("city") or ""
