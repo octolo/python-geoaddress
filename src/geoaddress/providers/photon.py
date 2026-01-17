@@ -3,6 +3,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import requests
+
 from .base import GeoaddressProvider
 
 PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE = {
@@ -10,7 +12,7 @@ PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'postal_code': ['properties.postcode'],
     'county': ['properties.county'],
     'state': ['properties.state'],
-    'region': ['properties.state', 'properties.region'],
+    'region': ['properties.region'],
     'country_code': ['properties.countrycode'],
     'country': ['properties.country'],
     'municipality': ['properties.municipality'],
@@ -47,6 +49,7 @@ class PhotonProvider(GeoaddressProvider):
         for field, source in PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
         properties = data.get("properties", {})
@@ -79,14 +82,43 @@ class PhotonProvider(GeoaddressProvider):
         countrycode = properties.get("countrycode", "")
         return countrycode.upper() if countrycode else ""
 
-    def get_normalize_region(self, data: dict[str, Any]) -> str:
-        properties = data.get("properties", {})
-        return properties.get("state", "") or properties.get("region", "")
-
     def get_normalize_osm_id(self, data: dict[str, Any]) -> int | None:
         properties = data.get("properties", {})
         osm_id = properties.get("osm_id")
         return int(osm_id) if osm_id is not None else None
+
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Search addresses using Photon."""
+        self.addresses_autocomplete_query = query
+        kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < 0.1:
+            time.sleep(0.1 - time_since_last)
+        self._last_request_time = time.time()
+
+        params = {
+            "q": query,
+            "limit": 10,
+        }
+
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["lat"] = str(lat)
+            params["lon"] = str(lon)
+
+        headers = {"User-Agent": self._user_agent}
+        response = requests.get(
+            f"{self._base_url}/api",
+            params=params,
+            headers=headers,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        features = result.get("features", []) if isinstance(result, dict) else []
+        return features if isinstance(features, list) else []
 
     def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Photon."""
