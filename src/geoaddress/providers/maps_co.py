@@ -3,8 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-import requests
-
 from .base import GeoaddressProvider
 
 MAPS_CO_ADDRESSES_AUTOCOMPLETE_SOURCE = {

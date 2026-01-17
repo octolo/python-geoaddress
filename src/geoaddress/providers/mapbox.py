@@ -4,8 +4,6 @@ import time
 import urllib.parse
 from typing import Any
 
-import requests
-
 from .base import GeoaddressProvider
 
 MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE = {
