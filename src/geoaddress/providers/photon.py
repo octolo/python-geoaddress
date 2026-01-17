@@ -10,7 +10,7 @@ PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'postal_code': ['properties.postcode'],
     'county': ['properties.county'],
     'state': ['properties.state'],
-    'region': ['properties.region'],
+    'region': ['properties.state', 'properties.region'],
     'country_code': ['properties.countrycode'],
     'country': ['properties.country'],
     'municipality': ['properties.municipality'],
@@ -78,6 +78,10 @@ class PhotonProvider(GeoaddressProvider):
         properties = data.get("properties", {})
         countrycode = properties.get("countrycode", "")
         return countrycode.upper() if countrycode else ""
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("state", "") or properties.get("region", "")
 
     def get_normalize_osm_id(self, data: dict[str, Any]) -> int | None:
         properties = data.get("properties", {})
