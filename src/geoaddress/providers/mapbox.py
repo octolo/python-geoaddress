@@ -4,6 +4,8 @@ import time
 import urllib.parse
 from typing import Any
 
+import requests
+
 from .base import GeoaddressProvider
 
 MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE = {
@@ -40,9 +42,14 @@ class MapboxProvider(GeoaddressProvider):
         self._base_url = "https://api.mapbox.com"
         self._access_token = self._get_config_or_env("ACCESS_TOKEN")
         self._last_request_time = 0.0
+        # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
+                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
+                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
+                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def _extract_context_value(self, context: list[dict[str, Any]], prefix: str) -> str:
         """Extract value from context array by id prefix."""
@@ -130,6 +137,40 @@ class MapboxProvider(GeoaddressProvider):
     def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
         context = data.get("context", [])
         return self._extract_context_value(context, "neighborhood")
+
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Search addresses using Mapbox."""
+        self.addresses_autocomplete_query = query
+        kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
+        if not self._access_token:
+            raise ValueError("MAPBOX_ACCESS_TOKEN not configured")
+
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < 0.1:
+            time.sleep(0.1 - time_since_last)
+        self._last_request_time = time.time()
+
+        encoded_query = urllib.parse.quote(query)
+        params = {
+            "access_token": self._access_token,
+            "limit": 10,
+        }
+
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["proximity"] = f"{lon},{lat}"
+
+        response = requests.get(
+            f"{self._base_url}/geocoding/v5/mapbox.places/{encoded_query}.json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        features = result.get("features", []) if isinstance(result, dict) else []
+        return features if isinstance(features, list) else []
 
     def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Mapbox."""

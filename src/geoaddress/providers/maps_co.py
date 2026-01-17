@@ -3,6 +3,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import requests
+
 from .base import GeoaddressProvider
 
 MAPS_CO_ADDRESSES_AUTOCOMPLETE_SOURCE = {
@@ -42,9 +44,14 @@ class MapsCoProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://geocode.maps.co")
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
+        # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in MAPS_CO_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
+                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
+                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
+                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
         return (
@@ -64,6 +71,37 @@ class MapsCoProvider(GeoaddressProvider):
         house_number = self._normalize_recursive(data, 'address_line1', src_hn)
         road = self._normalize_recursive(data, 'address_line1', src_rd)
         return f'{house_number} {road}'.strip()
+
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Search addresses using Maps.co."""
+        self.addresses_autocomplete_query = query
+        kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
+        if not self._api_key:
+            raise ValueError("MAPS_CO_API_KEY not configured")
+
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < 1.0:
+            time.sleep(1.0 - time_since_last)
+        self._last_request_time = time.time()
+
+        params = {
+            "api_key": self._api_key,
+            "q": query,
+            "format": "json",
+            "addressdetails": 1,
+            "limit": 10,
+        }
+
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["lat"] = str(lat)
+            params["lon"] = str(lon)
+
+        response = requests.get(f"{self._base_url}/search", params=params, timeout=self.geoaddress_timeout)
+        response.raise_for_status()
+        return response.json()
 
     def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Maps.co."""

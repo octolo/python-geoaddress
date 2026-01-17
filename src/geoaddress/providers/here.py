@@ -3,6 +3,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import requests
+
 from .base import GeoaddressProvider
 
 HERE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
@@ -40,9 +42,14 @@ class HereProvider(GeoaddressProvider):
         self._app_id = self._get_config_or_env("APP_ID")
         self._app_code = self._get_config_or_env("APP_CODE")
         self._last_request_time = 0.0
+        # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in HERE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
+                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
+                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
+                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
         location = data.get("Location", {})
@@ -78,6 +85,43 @@ class HereProvider(GeoaddressProvider):
         address = location.get("Address", {})
         country = address.get("Country", "")
         return country.upper() if country else ""
+
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Search addresses using Here."""
+        self.addresses_autocomplete_query = query
+        kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
+        if not self._app_id or not self._app_code:
+            raise ValueError("HERE_APP_ID and HERE_APP_CODE must be configured")
+
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < 0.1:
+            time.sleep(0.1 - time_since_last)
+        self._last_request_time = time.time()
+
+        params = {
+            "app_id": self._app_id,
+            "app_code": self._app_code,
+            "searchtext": query,
+            "maxresults": 10,
+        }
+
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["prox"] = f"{lat},{lon},5000"
+
+        response = requests.get(
+            f"{self._base_url}/geocode.json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        response_data = result.get("Response", {}) if isinstance(result, dict) else {}
+        view = response_data.get("View", [])
+        results_list = view[0].get("Result", []) if view else []
+        return results_list if isinstance(results_list, list) else []
 
     def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Here."""

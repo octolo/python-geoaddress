@@ -3,6 +3,8 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import requests
+
 from .base import GeoaddressProvider
 
 GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
@@ -39,9 +41,14 @@ class GoogleMapsProvider(GeoaddressProvider):
         self._base_url = "https://maps.googleapis.com/maps/api"
         self._api_key = self._get_config_or_env("API_KEY")
         self._last_request_time = 0.0
+        # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
+                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
+                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
+            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
+                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def _extract_component_by_type(self, address_components: list[dict[str, Any]], types_list: list[str]) -> dict[str, str]:
         """Extract component by types from address_components."""
@@ -129,6 +136,41 @@ class GoogleMapsProvider(GeoaddressProvider):
         location = geometry.get("location", {})
         lng_val = location.get("lng")
         return float(lng_val) if lng_val is not None else None
+
+    def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
+        """Search addresses using Google Maps."""
+        self.addresses_autocomplete_query = query
+        kwargs.pop('raw', False)
+        proximity = kwargs.pop('proximity', None)
+        if not self._api_key:
+            raise ValueError("GOOGLE_MAPS_API_KEY not configured")
+
+        current_time = time.time()
+        time_since_last = current_time - self._last_request_time
+        if time_since_last < 0.1:
+            time.sleep(0.1 - time_since_last)
+        self._last_request_time = time.time()
+
+        params = {
+            "key": self._api_key,
+            "address": query,
+        }
+
+        lat, lon = self._parse_proximity(proximity)
+        if lat is not None and lon is not None:
+            params["location"] = f"{lat},{lon}"
+
+        response = requests.get(
+            f"{self._base_url}/geocode/json",
+            params=params,
+            timeout=self.geoaddress_timeout,
+        )
+        response.raise_for_status()
+        result = response.json()
+        if result.get("status") != "OK":
+            return []
+        results_list = result.get("results", []) if isinstance(result, dict) else []
+        return results_list if isinstance(results_list, list) else []
 
     def addresses_autocomplete(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Google Maps."""
