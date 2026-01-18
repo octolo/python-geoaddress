@@ -31,6 +31,7 @@ class HereProvider(GeoaddressProvider):
     config_keys = ["APP_ID", "APP_CODE"]
     config_required = ["APP_ID", "APP_CODE"]
     cost_addresses_autocomplete = 0.001
+    cost_search_addresses = 0.001
     cost_reverse_geocode = 0.001
 
     def __init__(self, **kwargs: str | None) -> None:

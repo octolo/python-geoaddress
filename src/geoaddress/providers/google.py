@@ -31,6 +31,7 @@ class GoogleMapsProvider(GeoaddressProvider):
     config_keys = ["API_KEY"]
     config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.005
+    cost_search_addresses = 0.005
     cost_reverse_geocode = 0.005
 
     def __init__(self, **kwargs: str | None) -> None:

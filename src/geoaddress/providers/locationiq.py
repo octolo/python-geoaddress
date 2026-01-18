@@ -36,6 +36,7 @@ class LocationIQProvider(GeoaddressProvider):
     }
     config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.00013
+    cost_search_addresses = 0.00013
     cost_reverse_geocode = 0.00013
 
     def __init__(self, **kwargs: str | None) -> None:

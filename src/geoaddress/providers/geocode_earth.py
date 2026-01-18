@@ -34,6 +34,7 @@ class GeocodeEarthProvider(GeoaddressProvider):
     }
     config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.00015
+    cost_search_addresses = 0.00015
     cost_reverse_geocode = 0.00015
 
     def __init__(self, **kwargs: str | None) -> None:

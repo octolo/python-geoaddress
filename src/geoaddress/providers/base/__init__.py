@@ -50,60 +50,6 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
     provider_key = "key"
     importance_key = "importance"
 
-    # def get_backend_name(self, data_normalized: dict[str, Any]) -> dict[str, Any]:
-    #     return self.display_name
-#
-    # def get_backend(self, data_normalized: dict[str, Any]) -> dict[str, Any]:
-    #     return self.name
-#
-    # def insert_data_normalized(self, data_normalized: dict[str, Any] | list[dict[str, Any]], config: dict[str, Any] | None = None) -> dict[str, Any] | list[dict[str, Any]]:  # noqa: C901
-    #     cfg = self.services_cfg.get(self.current_service_name, config)
-    #     raw_result = None
-    #     service_name = None
-    #     if hasattr(self, '_service_results_cache') and self._service_results_cache:
-    #         for svc_name, svc_data in self._service_results_cache.items():
-    #             if 'result' in svc_data:
-    #                 service_name = svc_name
-    #                 raw_result = svc_data['result']
-    #                 break
-#
-    #     if isinstance(data_normalized, list):
-    #         raw_list = raw_result if isinstance(raw_result, list) else None
-    #         for idx, item in enumerate(data_normalized):
-    #             item["backend"] = self.display_name
-    #             item["backend_name"] = self.name
-    #             item["geoaddress_id"] = self._generate_geoaddress_id(item.get('latitude'), item.get('longitude'))
-    #             item["text"] = self._build_address_string(item)
-    #             for field_name, format_config in GEOADDRESS_FIELDS_FORMATS.items():
-    #                 item[field_name] = self.insert_text_formatted(item, cast("list[Any]", format_config), field_name)
-#
-    #             feature = raw_list[idx] if raw_list and idx < len(raw_list) else None
-    #             if not item.get('confidence'):
-    #                 item['confidence'] = self._calculate_confidence(item, feature=feature, importance_key=self.importance_key)
-    #             if not item.get('relevance'):
-    #                 query_components = self._extract_query_components(raw_result, service_name)
-    #                 query_lat = query_components.get('latitude')
-    #                 query_lon = query_components.get('longitude')
-    #                 item['relevance'] = self._calculate_relevance(query_components or {}, item, query_latitude=query_lat, query_longitude=query_lon)
-#
-    #     elif isinstance(data_normalized, dict):
-    #         data_normalized["backend"] = self.display_name
-    #         data_normalized["backend_name"] = self.name
-    #         data_normalized["geoaddress_id"] = self._generate_geoaddress_id(data_normalized.get('latitude'), data_normalized.get('longitude'))
-    #         data_normalized["text"] = self._build_address_string(data_normalized)
-    #         for field_name, format_config in GEOADDRESS_FIELDS_FORMATS.items():
-    #             data_normalized[field_name] = self.insert_text_formatted(data_normalized, cast("list[Any]", format_config), field_name)
-#
-    #         feature = raw_result if isinstance(raw_result, dict) else (raw_result[0] if isinstance(raw_result, list) and raw_result else None)
-    #         if not data_normalized.get('confidence'):
-    #             data_normalized['confidence'] = self._calculate_confidence(data_normalized, feature=feature, importance_key=self.importance_key)
-    #         if not data_normalized.get('relevance'):
-    #             query_components = self._extract_query_components(raw_result, service_name)
-    #             query_lat = query_components.get('latitude')
-    #             query_lon = query_components.get('longitude')
-    #             data_normalized['relevance'] = self._calculate_relevance(query_components or {}, data_normalized, query_latitude=query_lat, query_longitude=query_lon)
-    #     return data_normalized
-
     def _extract_query_components(self, raw_result: Any, service_name: str | None) -> dict[str, Any]:
         query_components: dict[str, Any] = {}
         if service_name == "addresses_autocomplete":
