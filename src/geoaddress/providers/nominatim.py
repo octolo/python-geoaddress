@@ -4,6 +4,7 @@ from typing import Any
 
 from .base import GeoaddressProvider
 
+
 NOMINATIM_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'text': ['display_name'],
     'city': ['address.city', 'address.town', 'address.village'],
@@ -23,7 +24,6 @@ NOMINATIM_ADDRESSES_AUTOCOMPLETE_SOURCE = {
 }
 
 
-
 class NominatimProvider(GeoaddressProvider):
     name = "nominatim"
     display_name = "Nominatim"
@@ -37,6 +37,7 @@ class NominatimProvider(GeoaddressProvider):
         "USER_AGENT": "python-geoaddress/1.0",
     }
     config_required = ["USER_AGENT"]
+    priority = 5
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Nominatim provider."""

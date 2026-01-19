@@ -173,6 +173,8 @@ GEOADDRESS_FIELDS_SEARCH = {
     "text_full": GEOADDRESS_FIELDS_EXTENDED["text_full"],
     "confidence": GEOADDRESS_FIELDS_EXTENDED["confidence"],
     "relevance": GEOADDRESS_FIELDS_EXTENDED["relevance"],
+    "backend": GEOADDRESS_FIELDS_EXTENDED["backend"],
+    "backend_name": GEOADDRESS_FIELDS_EXTENDED["backend_name"],
     "geoaddress_id": GEOADDRESS_FIELDS_EXTENDED["geoaddress_id"],
 }
 
