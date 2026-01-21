@@ -28,7 +28,6 @@ class HereProvider(GeoaddressProvider):
     documentation_url = "https://developer.here.com/documentation/geocoding-search-api"
     site_url = "https://developer.here.com"
     config_keys = ["APP_ID", "APP_CODE"]
-    config_required = ["APP_ID", "APP_CODE"]
     cost_addresses_autocomplete = 0.001
     cost_search_addresses = 0.001
     cost_reverse_geocode = 0.001

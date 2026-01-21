@@ -31,7 +31,6 @@ class GeocodeEarthProvider(GeoaddressProvider):
     config_defaults = {
         "BASE_URL": "https://api.geocode.earth/v1",
     }
-    config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.00015
     cost_search_addresses = 0.00015
     cost_reverse_geocode = 0.00015

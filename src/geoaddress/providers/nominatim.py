@@ -35,7 +35,6 @@ class NominatimProvider(GeoaddressProvider):
         "BASE_URL": "https://nominatim.openstreetmap.org",
         "USER_AGENT": "python-geoaddress/1.0",
     }
-    config_required = ["USER_AGENT"]
     priority = 4
 
     def __init__(self, **kwargs: str | None) -> None:

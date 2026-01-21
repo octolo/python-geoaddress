@@ -33,7 +33,7 @@ When creating a new provider:
 - [ ] Inherit from `GeoaddressProvider`
 - [ ] Define `name`, `display_name`, and `description`
 - [ ] Set `required_packages` if needed
-- [ ] Configure `config_keys`, `config_defaults`, and `config_required`
+- [ ] Configure `config_keys` and `config_defaults`
 - [ ] Implement `addresses_autocomplete()` method
 - [ ] Implement `reverse_geocode()` method
 - [ ] Map provider response to standard geoaddress format

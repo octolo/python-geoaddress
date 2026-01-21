@@ -31,7 +31,6 @@ class OpencageProvider(GeoaddressProvider):
     config_defaults = {
         "BASE_URL": "https://api.opencagedata.com/geocode/v1",
     }
-    config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.00017
     cost_search_addresses = 0.00017
     cost_reverse_geocode = 0.00017

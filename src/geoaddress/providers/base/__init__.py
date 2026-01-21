@@ -24,7 +24,6 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
     site_url = "https://geoaddress.readthedocs.io"
     config_keys: list[str] = []
     config_defaults: dict[str, Any] = {}
-    config_required: list[str] = []
     config_prefix = "GEOADDRESS"
     _default_services_cfg = {
         "search_addresses": {

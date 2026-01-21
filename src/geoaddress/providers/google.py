@@ -28,7 +28,6 @@ class GoogleMapsProvider(GeoaddressProvider):
     documentation_url = "https://developers.google.com/maps/documentation/geocoding"
     site_url = "https://developers.google.com/maps"
     config_keys = ["API_KEY"]
-    config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.005
     cost_search_addresses = 0.005
     cost_reverse_geocode = 0.005

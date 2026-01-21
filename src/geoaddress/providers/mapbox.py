@@ -29,7 +29,6 @@ class MapboxProvider(GeoaddressProvider):
     documentation_url = "https://docs.mapbox.com/api/search/geocoding/"
     site_url = "https://www.mapbox.com"
     config_keys = ["ACCESS_TOKEN"]
-    config_required = ["ACCESS_TOKEN"]
     cost_addresses_autocomplete = 0.0005
     cost_search_addresses = 0.0005
     cost_reverse_geocode = 0.0005

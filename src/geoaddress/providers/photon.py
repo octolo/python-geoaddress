@@ -34,7 +34,6 @@ class PhotonProvider(GeoaddressProvider):
         "BASE_URL": "https://photon.komoot.io",
         "USER_AGENT": "python-geoaddress/1.0",
     }
-    config_required = []
     priority = 5
 
     def __init__(self, **kwargs: str | None) -> None:

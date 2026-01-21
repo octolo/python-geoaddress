@@ -31,7 +31,6 @@ class GeoapifyProvider(GeoaddressProvider):
     config_defaults = {
         "BASE_URL": "https://api.geoapify.com/v1",
     }
-    config_required = ["API_KEY"]
     cost_addresses_autocomplete = 0.0002
     cost_search_addresses = 0.0002
     cost_reverse_geocode = 0.0002

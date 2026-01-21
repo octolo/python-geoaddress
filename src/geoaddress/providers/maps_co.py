@@ -33,7 +33,6 @@ class MapsCoProvider(GeoaddressProvider):
     config_defaults = {
         "BASE_URL": "https://geocode.maps.co",
     }
-    config_required = ["API_KEY"]
     priority = 5
 
     def __init__(self, **kwargs: str | None) -> None:
