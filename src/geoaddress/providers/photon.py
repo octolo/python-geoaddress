@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from .base import GeoaddressProvider
@@ -43,7 +42,6 @@ class PhotonProvider(GeoaddressProvider):
         super().__init__(**kwargs)
         self._base_url = self._get_config_or_env("BASE_URL", "https://photon.komoot.io")
         self._user_agent = self._get_config_or_env("USER_AGENT", "python-geoaddress/1.0")
-        self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
@@ -94,12 +92,6 @@ class PhotonProvider(GeoaddressProvider):
         self.addresses_autocomplete_query = query
         kwargs.pop('raw', False)
         proximity = kwargs.pop('proximity', None)
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "q": query,
             "limit": 10,
@@ -126,12 +118,6 @@ class PhotonProvider(GeoaddressProvider):
         """Search addresses using Photon."""
         self.addresses_autocomplete_query = query
         proximity = kwargs.pop('proximity', None)
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "q": query,
             "limit": 10,
@@ -165,12 +151,6 @@ class PhotonProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "lat": str(latitude),

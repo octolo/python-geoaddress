@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from .base import GeoaddressProvider
@@ -35,13 +34,13 @@ class MapsCoProvider(GeoaddressProvider):
         "BASE_URL": "https://geocode.maps.co",
     }
     config_required = ["API_KEY"]
+    priority = 5
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Maps.co provider."""
         super().__init__(**kwargs)
         self._base_url = self._get_config_or_env("BASE_URL", "https://geocode.maps.co")
         self._api_key = self._get_config_or_env("API_KEY")
-        self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in MAPS_CO_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
@@ -78,12 +77,6 @@ class MapsCoProvider(GeoaddressProvider):
         if not self._api_key:
             raise ValueError("MAPS_CO_API_KEY not configured")
 
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 1.0:
-            time.sleep(1.0 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "api_key": self._api_key,
             "q": query,
@@ -107,12 +100,6 @@ class MapsCoProvider(GeoaddressProvider):
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("MAPS_CO_API_KEY not configured")
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 1.0:
-            time.sleep(1.0 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "api_key": self._api_key,
@@ -145,12 +132,6 @@ class MapsCoProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 1.0:
-            time.sleep(1.0 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "api_key": self._api_key,

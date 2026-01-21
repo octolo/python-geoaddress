@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Any, cast
 
 
@@ -22,7 +20,7 @@ class ConfidenceMixin:
             val = val.get(k) if isinstance(val, dict) else None
             if val is None:
                 return None
-        return cast(float, val)
+        return cast("float", val)
 
     def _calculate_confidence_from_importance(self, importance: float, multiplier: float) -> float | None:
         """Calculate confidence from importance value."""
@@ -91,3 +89,4 @@ class ConfidenceMixin:
         else:
             base_conf = 30.0
         return self._round_score(base_conf)
+

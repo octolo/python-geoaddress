@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from .base import GeoaddressProvider
@@ -36,13 +35,13 @@ class GeoapifyProvider(GeoaddressProvider):
     cost_addresses_autocomplete = 0.0002
     cost_search_addresses = 0.0002
     cost_reverse_geocode = 0.0002
+    priority = 2
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Geoapify provider."""
         super().__init__(**kwargs)
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.geoapify.com/v1")
         self._api_key = self._get_config_or_env("API_KEY")
-        self._last_request_time = 0.0
         for field, source in GEOAPIFY_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
             self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
@@ -75,12 +74,6 @@ class GeoapifyProvider(GeoaddressProvider):
         if not self._api_key:
             raise ValueError("API_KEY not configured")
 
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "apiKey": self._api_key,
             "text": query,
@@ -107,12 +100,6 @@ class GeoapifyProvider(GeoaddressProvider):
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("API_KEY not configured")
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "apiKey": self._api_key,
@@ -148,12 +135,6 @@ class GeoapifyProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "apiKey": self._api_key,

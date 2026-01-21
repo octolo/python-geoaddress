@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from .base import GeoaddressProvider
@@ -39,7 +38,6 @@ class GoogleMapsProvider(GeoaddressProvider):
         super().__init__(**kwargs)
         self._base_url = "https://maps.googleapis.com/maps/api"
         self._api_key = self._get_config_or_env("API_KEY")
-        self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
@@ -144,12 +142,6 @@ class GoogleMapsProvider(GeoaddressProvider):
         if not self._api_key:
             raise ValueError("GOOGLE_MAPS_API_KEY not configured")
 
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "key": self._api_key,
             "address": query,
@@ -177,12 +169,6 @@ class GoogleMapsProvider(GeoaddressProvider):
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("GOOGLE_MAPS_API_KEY not configured")
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "key": self._api_key,
@@ -219,12 +205,6 @@ class GoogleMapsProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "key": self._api_key,

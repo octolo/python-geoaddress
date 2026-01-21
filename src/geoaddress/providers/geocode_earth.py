@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from .base import GeoaddressProvider
@@ -43,7 +42,6 @@ class GeocodeEarthProvider(GeoaddressProvider):
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.geocode.earth/v1")
         api_key = self._get_config_or_env("API_KEY")
         self._api_key = api_key.strip() if api_key else None
-        self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in GEOCODE_EARTH_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
@@ -82,12 +80,6 @@ class GeocodeEarthProvider(GeoaddressProvider):
         if not self._api_key:
             raise ValueError("GEOCODE_EARTH_API_KEY not configured")
 
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.5:
-            time.sleep(0.5 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "api_key": self._api_key,
             "text": query,
@@ -115,12 +107,6 @@ class GeocodeEarthProvider(GeoaddressProvider):
         proximity = kwargs.pop('proximity', None)
         if not self._api_key:
             raise ValueError("GEOCODE_EARTH_API_KEY not configured")
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.5:
-            time.sleep(0.5 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "api_key": self._api_key,
@@ -157,12 +143,6 @@ class GeocodeEarthProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.5:
-            time.sleep(0.5 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "api_key": self._api_key,

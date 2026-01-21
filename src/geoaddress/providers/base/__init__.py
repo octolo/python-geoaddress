@@ -181,19 +181,19 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
         return self.display_name
 
     def get_insert_normalized_text_aligned(self, _data: Any, normalized: dict[str, Any], _config: dict[str, Any]) -> list[str] | list[list[str]]:
-        format_config = cast(list[Any], GEOADDRESS_FIELDS_FORMATS["text_aligned"])
+        format_config = cast("list[Any]", GEOADDRESS_FIELDS_FORMATS["text_aligned"])
         return self.insert_text_formatted(_data, normalized, format_config)
 
     def get_insert_normalized_text_2lines(self, _data: Any, normalized: dict[str, Any], _config: dict[str, Any]) -> list[str] | list[list[str]]:
-        format_config = cast(list[Any], GEOADDRESS_FIELDS_FORMATS["text_2lines"])
+        format_config = cast("list[Any]", GEOADDRESS_FIELDS_FORMATS["text_2lines"])
         return self.insert_text_formatted(_data, normalized, format_config)
 
     def get_insert_normalized_text_3lines(self, _data: Any, normalized: dict[str, Any], _config: dict[str, Any]) -> list[str] | list[list[str]]:
-        format_config = cast(list[Any], GEOADDRESS_FIELDS_FORMATS["text_3lines"])
+        format_config = cast("list[Any]", GEOADDRESS_FIELDS_FORMATS["text_3lines"])
         return self.insert_text_formatted(_data, normalized, format_config)
 
     def get_insert_normalized_text_full(self, _data: Any, normalized: dict[str, Any], _config: dict[str, Any]) -> list[str] | list[list[str]]:
-        format_config = cast(list[Any], GEOADDRESS_FIELDS_FORMATS["text_full"])
+        format_config = cast("list[Any]", GEOADDRESS_FIELDS_FORMATS["text_full"])
         return self.insert_text_formatted(_data, normalized, format_config)
 
     def get_insert_normalized_geoaddress_id(self, data: Any, _normalized: dict[str, Any], _config: dict[str, Any]) -> str:

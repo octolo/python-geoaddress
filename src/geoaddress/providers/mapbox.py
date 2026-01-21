@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 import urllib.parse
 from typing import Any
 
@@ -34,13 +33,13 @@ class MapboxProvider(GeoaddressProvider):
     cost_addresses_autocomplete = 0.0005
     cost_search_addresses = 0.0005
     cost_reverse_geocode = 0.0005
+    priority = 3
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Mapbox provider."""
         super().__init__(**kwargs)
         self._base_url = "https://api.mapbox.com"
         self._access_token = self._get_config_or_env("ACCESS_TOKEN")
-        self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
@@ -145,12 +144,6 @@ class MapboxProvider(GeoaddressProvider):
         if not self._access_token:
             raise ValueError("MAPBOX_ACCESS_TOKEN not configured")
 
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
         encoded_query = urllib.parse.quote(query)
         params = {
             "access_token": self._access_token,
@@ -177,12 +170,6 @@ class MapboxProvider(GeoaddressProvider):
         proximity = kwargs.pop('proximity', None)
         if not self._access_token:
             raise ValueError("MAPBOX_ACCESS_TOKEN not configured")
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         encoded_query = urllib.parse.quote(query)
         params = {
@@ -218,12 +205,6 @@ class MapboxProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "access_token": self._access_token,

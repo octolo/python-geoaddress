@@ -74,10 +74,10 @@ class RelevanceMixin:
         ]
 
         for rule in field_rules:
-            q_keys: list[str] = cast(list[str], rule["query_key"]) if isinstance(rule["query_key"], list) else [cast(str, rule["query_key"])]
-            r_keys: list[str] = cast(list[str], rule["result_key"]) if isinstance(rule["result_key"], list) else [cast(str, rule["result_key"])]
-            weight_key: str = cast(str, rule["weight_key"])
-            match_type: str = cast(str, rule["match_type"])
+            q_keys: list[str] = cast("list[str]", rule["query_key"]) if isinstance(rule["query_key"], list) else [cast("str", rule["query_key"])]
+            r_keys: list[str] = cast("list[str]", rule["result_key"]) if isinstance(rule["result_key"], list) else [cast("str", rule["result_key"])]
+            weight_key: str = cast("str", rule["weight_key"])
+            match_type: str = cast("str", rule["match_type"])
 
             q_value = next((query_components.get(k) for k in q_keys if query_components.get(k)), "")
             extract_func: Callable[[], str] | None = rule.get("extract_from_query")
@@ -147,3 +147,4 @@ class RelevanceMixin:
         else:
             relevance_percent = 0.0
         return self._round_score(relevance_percent)
+

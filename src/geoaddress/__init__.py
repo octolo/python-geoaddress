@@ -99,11 +99,6 @@ GEOADDRESS_FIELDS_FORMATS = {
 }
 
 GEOADDRESS_FIELDS_EXTENDED = {
-    "text": {
-        "label": "Full formatted address string",
-        "description": "Full formatted address string",
-        "format": "text",
-    },
     "text_aligned": {
         "label": "Full formatted address string (aligned)",
         "description": "Full formatted address string (aligned)",

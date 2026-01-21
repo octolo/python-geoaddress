@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 
 from .base import GeoaddressProvider
@@ -40,7 +39,6 @@ class HereProvider(GeoaddressProvider):
         self._base_url = "https://geocoder.api.here.com/6.2"
         self._app_id = self._get_config_or_env("APP_ID")
         self._app_code = self._get_config_or_env("APP_CODE")
-        self._last_request_time = 0.0
         # Assign sources for each field (services_cfg is already copied by ProviderBase)
         for field, source in HERE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
             if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
@@ -93,12 +91,6 @@ class HereProvider(GeoaddressProvider):
         if not self._app_id or not self._app_code:
             raise ValueError("HERE_APP_ID and HERE_APP_CODE must be configured")
 
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
-
         params = {
             "app_id": self._app_id,
             "app_code": self._app_code,
@@ -128,12 +120,6 @@ class HereProvider(GeoaddressProvider):
         proximity = kwargs.pop('proximity', None)
         if not self._app_id or not self._app_code:
             raise ValueError("HERE_APP_ID and HERE_APP_CODE must be configured")
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "app_id": self._app_id,
@@ -172,12 +158,6 @@ class HereProvider(GeoaddressProvider):
 
         self.reverse_geocode_latitude = latitude
         self.reverse_geocode_longitude = longitude
-
-        current_time = time.time()
-        time_since_last = current_time - self._last_request_time
-        if time_since_last < 0.1:
-            time.sleep(0.1 - time_since_last)
-        self._last_request_time = time.time()
 
         params = {
             "app_id": self._app_id,
