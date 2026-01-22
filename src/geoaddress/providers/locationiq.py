@@ -37,20 +37,13 @@ class LocationIQProvider(GeoaddressProvider):
     cost_search_addresses = 0.00013
     cost_reverse_geocode = 0.00013
     priority = 4
+    fields_associations = LOCATIONIQ_ADDRESSES_AUTOCOMPLETE_SOURCE
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize LocationIQ provider."""
         super().__init__(**kwargs)
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.locationiq.com/v1")
         self._api_key = self._get_config_or_env("API_KEY")
-        # Assign sources for each field (services_cfg is already copied by ProviderBase)
-        for field, source in LOCATIONIQ_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
-                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
-                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
-            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
-                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def get_normalize_address_type(self, data: dict[str, Any]) -> str:
         return (

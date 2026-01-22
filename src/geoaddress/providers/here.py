@@ -31,6 +31,7 @@ class HereProvider(GeoaddressProvider):
     cost_addresses_autocomplete = 0.001
     cost_search_addresses = 0.001
     cost_reverse_geocode = 0.001
+    fields_associations = HERE_ADDRESSES_AUTOCOMPLETE_SOURCE
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Here provider."""
@@ -38,14 +39,6 @@ class HereProvider(GeoaddressProvider):
         self._base_url = "https://geocoder.api.here.com/6.2"
         self._app_id = self._get_config_or_env("APP_ID")
         self._app_code = self._get_config_or_env("APP_CODE")
-        # Assign sources for each field (services_cfg is already copied by ProviderBase)
-        for field, source in HERE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
-                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
-                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
-            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
-                self.services_cfg['search_addresses']['fields'][field]['source'] = source
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
         location = data.get("Location", {})

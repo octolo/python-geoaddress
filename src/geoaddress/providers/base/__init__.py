@@ -197,8 +197,10 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
 
     def get_insert_normalized_geoaddress_id(self, data: Any, _normalized: dict[str, Any], _config: dict[str, Any]) -> str:
         cfg = self.services_cfg.get("addresses_autocomplete", {})
-        latitude = self._normalize_recursive(data, 'latitude', cfg['fields'].get('latitude').get('source'))
-        longitude = self._normalize_recursive(data, 'longitude', cfg['fields'].get('longitude').get('source'))
+        latitude_source = cfg.get('fields', {}).get('latitude', {}).get('source', self.fields_associations.get('latitude'))
+        longitude_source = cfg.get('fields', {}).get('longitude', {}).get('source', self.fields_associations.get('longitude'))
+        latitude = self._normalize_recursive(data, 'latitude', latitude_source)
+        longitude = self._normalize_recursive(data, 'longitude', longitude_source)
         return self._generate_geoaddress_id(latitude, longitude)
 
     def _generate_geoaddress_id(self, latitude: float | None, longitude: float | None) -> str:

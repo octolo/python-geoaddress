@@ -35,15 +35,13 @@ class GeoapifyProvider(GeoaddressProvider):
     cost_search_addresses = 0.0002
     cost_reverse_geocode = 0.0002
     priority = 2
+    fields_associations = GEOAPIFY_ADDRESSES_AUTOCOMPLETE_SOURCE
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Geoapify provider."""
         super().__init__(**kwargs)
         self._base_url = self._get_config_or_env("BASE_URL", "https://api.geoapify.com/v1")
         self._api_key = self._get_config_or_env("API_KEY")
-        for field, source in GEOAPIFY_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
 
     def get_normalize_address_line1(self, data: dict[str, Any]) -> str:
         properties = data.get("properties", {})

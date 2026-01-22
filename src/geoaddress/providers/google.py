@@ -31,20 +31,14 @@ class GoogleMapsProvider(GeoaddressProvider):
     cost_addresses_autocomplete = 0.005
     cost_search_addresses = 0.005
     cost_reverse_geocode = 0.005
+    fields_associations = GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE
 
     def __init__(self, **kwargs: str | None) -> None:
         """Initialize Google Maps provider."""
         super().__init__(**kwargs)
         self._base_url = "https://maps.googleapis.com/maps/api"
         self._api_key = self._get_config_or_env("API_KEY")
-        # Assign sources for each field (services_cfg is already copied by ProviderBase)
-        for field, source in GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE.items():
-            if field in self.services_cfg.get('addresses_autocomplete', {}).get('fields', {}):
-                self.services_cfg['addresses_autocomplete']['fields'][field]['source'] = source
-            if field in self.services_cfg.get('reverse_geocode', {}).get('fields', {}):
-                self.services_cfg['reverse_geocode']['fields'][field]['source'] = source
-            if field in self.services_cfg.get('search_addresses', {}).get('fields', {}):
-                self.services_cfg['search_addresses']['fields'][field]['source'] = source
+
 
     def _extract_component_by_type(self, address_components: list[dict[str, Any]], types_list: list[str]) -> dict[str, str]:
         """Extract component by types from address_components."""

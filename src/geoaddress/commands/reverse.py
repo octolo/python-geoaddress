@@ -47,8 +47,10 @@ def _reverse_command(args: list[str]) -> bool:
     raw = parsed.get('raw', False)
     pvs_addresses = reverse_geocode(latitude, longitude, **kwargs)
     for pv in pvs_addresses:
+        name = pv['provider'].name
+        time = pv['response_time']
         print_separator()
-        print_header(pv['provider'].name)
+        print_header(f"{name} - {time}s")
         print_separator()
         print(pv['provider'].response('reverse_geocode', raw, output_format))
     return True
