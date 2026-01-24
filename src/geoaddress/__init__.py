@@ -95,27 +95,33 @@ GEOADDRESS_FIELDS_OPTIONALS = {
 }
 
 GEOADDRESS_FULL_FIELDS = {
-    **GEOADDRESS_FIELDS_ESSENTIALS
+    **GEOADDRESS_FIELDS_ESSENTIALS,
     **GEOADDRESS_FIELDS_OPTIONALS,
 }
 
 GEOADDRESS_FIELDS_FORMATS = {
+    "city_line": [
+        "postal_code", "city"
+    ],
+    "city_line_sorting": [
+        "city_line", "sorting_code"
+    ],
     "text_aligned": [
         "address_line1",
         "address_line2",
         "address_line3",
-        ["city", "postal_code",],
+        ["postal_code", "city"],
         ["state", "region"],
         ["country","country_code"],
         ["municipality", "neighbourhood"],
     ],
     "text_2lines": [
         ["address_line1", "address_line2", "address_line3",],
-        ["city", "postal_code", "county", "state", "region"],
+        ["postal_code", "city" "county", "state", "region"],
     ],
     "text_3lines": [
         ["address_line1", "address_line2", "address_line3",],
-        ["city", "postal_code", "county", "state", "region"],
+        ["postal_code", "city" "county", "state", "region"],
         ["country", "country_code"],
     ],
     "text_full": list(GEOADDRESS_FIELDS_ESSENTIALS.keys()),
@@ -184,7 +190,7 @@ GEOADDRESS_FIELDS_EXTENDED = {
     },
 }
 
-GEOADDRESS_FIELDS_DESCRIPTIONS = {**GEOADDRESS_FIELDS_ESSENTIALS, **GEOADDRESS_FIELDS_EXTENDED}
+GEOADDRESS_FIELDS_DESCRIPTIONS = {**GEOADDRESS_FULL_FIELDS, **GEOADDRESS_FIELDS_EXTENDED}
 
 
 GEOADDRESS_FIELDS_SEARCH = {

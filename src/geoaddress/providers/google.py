@@ -17,6 +17,8 @@ GOOGLE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'address_type': ['types'],
     'latitude': ['geometry.location.lat'],
     'longitude': ['geometry.location.lng'],
+    'number': ['address_components.street_number'],
+    'street': ['address_components.route'],
 }
 
 

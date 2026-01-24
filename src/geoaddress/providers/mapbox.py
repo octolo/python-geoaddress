@@ -18,6 +18,8 @@ MAPBOX_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'address_type': ['properties.type'],
     'latitude': ['geometry.coordinates.1'],
     'longitude': ['geometry.coordinates.0'],
+    'number': ['properties.address_number'],
+    'street': ['properties.street'],
 }
 
 
