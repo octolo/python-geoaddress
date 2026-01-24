@@ -76,6 +76,29 @@ GEOADDRESS_FIELDS_ESSENTIALS = {
     },
 }
 
+GEOADDRESS_FIELDS_OPTIONALS = {
+    "number": {
+        "label": "House number",
+        "description": "House number",
+        "format": "str",
+    },
+    "street": {
+        "label": "Street name",
+        "description": "Street name",
+        "format": "str",
+    },
+    "sorting_code": {
+        "label": "Sorting code",
+        "description": "Sorting code",
+        "format": "str",
+    },
+}
+
+GEOADDRESS_FULL_FIELDS = {
+    **GEOADDRESS_FIELDS_ESSENTIALS
+    **GEOADDRESS_FIELDS_OPTIONALS,
+}
+
 GEOADDRESS_FIELDS_FORMATS = {
     "text_aligned": [
         "address_line1",
