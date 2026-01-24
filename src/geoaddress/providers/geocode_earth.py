@@ -17,6 +17,8 @@ GEOCODE_EARTH_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'address_type': ['properties.layer', 'properties.type'],
     'latitude': ['geometry.coordinates.1'],
     'longitude': ['geometry.coordinates.0'],
+    'number': ['properties.housenumber'],
+    'street': ['properties.street'],
 }
 
 
@@ -60,10 +62,52 @@ class GeocodeEarthProvider(GeoaddressProvider):
         properties = data.get("properties", {})
         return properties.get("layer", "") or properties.get("type", "")
 
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return (
+            properties.get("locality")
+            or properties.get("localadmin")
+            or properties.get("county")
+            or ""
+        )
+
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("postalcode") or ""
+
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("county") or ""
+
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("state") or ""
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("region") or ""
+
     def get_normalize_country_code(self, data: dict[str, Any]) -> str:
         properties = data.get("properties", {})
         country_a = properties.get("country_a", "")
         return country_a.upper() if country_a else ""
+
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("country") or ""
+
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("municipality") or ""
+
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return (
+            properties.get("neighbourhood")
+            or properties.get("suburb")
+            or properties.get("district")
+            or ""
+        )
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Geocode Earth."""

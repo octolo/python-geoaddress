@@ -17,6 +17,8 @@ HERE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'address_type': [],
     'latitude': ['Location.DisplayPosition.Latitude'],
     'longitude': ['Location.DisplayPosition.Longitude'],
+    'number': ['Location.Address.HouseNumber'],
+    'street': ['Location.Address.Street'],
 }
 
 
@@ -69,11 +71,36 @@ class HereProvider(GeoaddressProvider):
         address = location.get("Address", {})
         return address.get("Subdistrict", "") or address.get("Neighborhood", "")
 
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("City", "") or ""
+
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("PostalCode", "") or ""
+
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("County", "") or ""
+
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("State", "") or ""
+
     def get_normalize_country_code(self, data: dict[str, Any]) -> str:
         location = data.get("Location", {})
         address = location.get("Address", {})
         country = address.get("Country", "")
         return country.upper() if country else ""
+
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        location = data.get("Location", {})
+        address = location.get("Address", {})
+        return address.get("Country", "") or ""
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using Here."""

@@ -19,6 +19,8 @@ PHOTON_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'longitude': ['geometry.coordinates.0'],
     'osm_id': ['properties.osm_id'],
     'osm_type': ['properties.osm_type'],
+    'number': ['properties.housenumber'],
+    'street': ['properties.street'],
 }
 
 
@@ -69,10 +71,48 @@ class PhotonProvider(GeoaddressProvider):
             return street
         return ""
 
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("city") or properties.get("town") or properties.get("village") or ""
+
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("postcode") or ""
+
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("county") or ""
+
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("state") or ""
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("region") or ""
+
     def get_normalize_country_code(self, data: dict[str, Any]) -> str:
         properties = data.get("properties", {})
         countrycode = properties.get("countrycode", "")
         return countrycode.upper() if countrycode else ""
+
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("country") or ""
+
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return properties.get("municipality") or ""
+
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        properties = data.get("properties", {})
+        return (
+            properties.get("district")
+            or properties.get("suburb")
+            or properties.get("quarter")
+            or properties.get("neighbourhood")
+            or ""
+        )
 
     def get_normalize_osm_id(self, data: dict[str, Any]) -> int | None:
         properties = data.get("properties", {})

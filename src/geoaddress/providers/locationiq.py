@@ -19,6 +19,8 @@ LOCATIONIQ_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'longitude': ['lon', 'centroid.coordinates.0', 'geometry.coordinates.0'],
     'osm_id': ['osm_id'],
     'osm_type': ['osm_type'],
+    'number': ['address.house_number', 'house_number'],
+    'street': ['address.road', 'address.street', 'road', 'street'],
 }
 
 
@@ -63,6 +65,48 @@ class LocationIQProvider(GeoaddressProvider):
         house_number = self._normalize_recursive(data, 'address_line1', src_hn)
         road = self._normalize_recursive(data, 'address_line1', src_rd)
         return f'{house_number} {road}'.strip()
+
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("city") or address.get("town") or address.get("village") or ""
+
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("postcode") or ""
+
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("county") or ""
+
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("state") or address.get("province") or ""
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("region") or ""
+
+    def get_normalize_country_code(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        country_code = address.get("country_code", "")
+        return country_code.upper() if country_code else ""
+
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("country") or ""
+
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return address.get("municipality") or ""
+
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        address = data.get("address", {})
+        return (
+            address.get("neighbourhood")
+            or address.get("suburb")
+            or address.get("quarter")
+            or ""
+        )
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using LocationIQ."""

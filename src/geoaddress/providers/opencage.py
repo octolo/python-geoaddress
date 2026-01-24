@@ -17,6 +17,8 @@ OPENCAGE_ADDRESSES_AUTOCOMPLETE_SOURCE = {
     'address_type': ['components._type'],
     'latitude': ['geometry.lat'],
     'longitude': ['geometry.lng'],
+    'number': ['components.house_number'],
+    'street': ['components.road'],
 }
 
 
@@ -58,10 +60,48 @@ class OpencageProvider(GeoaddressProvider):
                 return parts[0].strip()
         return ""
 
+    def get_normalize_city(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("city") or components.get("town") or components.get("village") or ""
+
+    def get_normalize_postal_code(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("postcode") or ""
+
+    def get_normalize_county(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("county") or ""
+
+    def get_normalize_state(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("state") or components.get("state_district") or ""
+
+    def get_normalize_region(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("region") or ""
+
     def get_normalize_country_code(self, data: dict[str, Any]) -> str:
         components = data.get("components", {})
         country_code = components.get("country_code", "")
         return country_code.upper() if country_code else ""
+
+    def get_normalize_country(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("country") or ""
+
+    def get_normalize_municipality(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return components.get("municipality") or ""
+
+    def get_normalize_neighbourhood(self, data: dict[str, Any]) -> str:
+        components = data.get("components", {})
+        return (
+            components.get("suburb")
+            or components.get("neighbourhood")
+            or components.get("quarter")
+            or components.get("district")
+            or ""
+        )
 
     def search_addresses(self, query: str, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: C901, ARG002
         """Search addresses using OpenCage."""
