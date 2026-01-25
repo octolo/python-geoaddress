@@ -173,12 +173,6 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
         cfg = self.services_cfg.get(service_name or "addresses_autocomplete", {})
         return self._calculate_confidence(data=data, config=cfg, feature=data, importance_key=self.importance_key)
 
-    def get_insert_normalized_backend(self, _data: Any, _normalized: dict[str, Any], _config: dict[str, Any]) -> str:
-        return self.name
-
-    def get_insert_normalized_backend_name(self, _data: Any, _normalized: dict[str, Any], _config: dict[str, Any]) -> str:
-        return self.display_name
-
     def get_insert_normalized_text_aligned(self, _data: Any, normalized: dict[str, Any], _config: dict[str, Any]) -> list[str] | list[list[str]]:
         format_config = cast("list[Any]", GEOADDRESS_FIELDS_FORMATS["text_aligned"])
         return self.insert_text_formatted(_data, normalized, format_config)
