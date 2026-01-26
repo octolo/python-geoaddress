@@ -34,45 +34,10 @@ GEOADDRESS_FIELDS_ESSENTIALS = {
         "description": "State/region/province",
         "format": "str",
     },
-    "region": {
-        "label": "Region or administrative area",
-        "description": "Region or administrative area",
-        "format": "str",
-    },
-    "county": {
-        "label": "County or administrative county",
-        "description": "County or administrative county",
-        "format": "str",
-    },
     "country": {
         "label": "Country name",
         "description": "Country name",
         "format": "str",
-    },
-    "country_code": {
-        "label": "ISO country code (e.g., FR, US, GB)",
-        "description": "ISO country code (e.g., FR, US, GB)",
-        "format": "str",
-    },
-    "municipality": {
-        "label": "Municipality or local administrative unit",
-        "description": "Municipality or local administrative unit",
-        "format": "str",
-    },
-    "neighbourhood": {
-        "label": "Neighbourhood, quarter, or district",
-        "description": "Neighbourhood, quarter, or district",
-        "format": "str",
-    },
-    "latitude": {
-        "label": "Latitude coordinate (float)",
-        "description": "Latitude coordinate (float)",
-        "format": "float",
-    },
-    "longitude": {
-        "label": "Longitude coordinate (float)",
-        "description": "Longitude coordinate (float)",
-        "format": "float",
     },
 }
 
@@ -87,16 +52,55 @@ GEOADDRESS_FIELDS_OPTIONALS = {
         "description": "Street name",
         "format": "str",
     },
+    "municipality": {
+        "label": "Municipality or local administrative unit",
+        "description": "Municipality or local administrative unit",
+        "format": "str",
+    },
+    "neighbourhood": {
+        "label": "Neighbourhood, quarter, or district",
+        "description": "Neighbourhood, quarter, or district",
+        "format": "str",
+    },
+    "region": {
+        "label": "Region or administrative area",
+        "description": "Region or administrative area",
+        "format": "str",
+    },
+    "county": {
+        "label": "County or administrative county",
+        "description": "County or administrative county",
+        "format": "str",
+    },
+    "country_code": {
+        "label": "ISO country code (e.g., FR, US, GB)",
+        "description": "ISO country code (e.g., FR, US, GB)",
+        "format": "str",
+    },
     "sorting_code": {
-        "label": "Sorting code",
+        "label": "Sorting code (e.g., CEDEX, BXX, etc.)",
         "description": "Sorting code",
         "format": "str",
+    },
+}
+
+GEOADDRESS_FIELDS_COORDINATES = {
+    "latitude": {
+        "label": "Latitude coordinate (float)",
+        "description": "Latitude coordinate (float)",
+        "format": "float",
+    },
+    "longitude": {
+        "label": "Longitude coordinate (float)",
+        "description": "Longitude coordinate (float)",
+        "format": "float",
     },
 }
 
 GEOADDRESS_FULL_FIELDS = {
     **GEOADDRESS_FIELDS_ESSENTIALS,
     **GEOADDRESS_FIELDS_OPTIONALS,
+    **GEOADDRESS_FIELDS_COORDINATES,
 }
 
 GEOADDRESS_FIELDS_FORMATS = {
