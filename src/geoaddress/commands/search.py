@@ -30,7 +30,7 @@ def _search_command(args: list[str]) -> bool:
         print_separator()
         print_header(f"{name} - {time}s")
         print_separator()
-        print(pv['provider'].response('search_addresses', raw=raw, format=output_format))
+        print(pv['provider'].response('search_addresses', raw=raw, output_format=output_format))
     return True
 
 
