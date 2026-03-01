@@ -1,0 +1,44 @@
+{% load i18n static boosted_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Location Detail" %}</title>
+    <link rel="stylesheet" href="{% static 'css/geoaddress_suggest.css' %}">
+    <link rel="stylesheet" href="{% static 'css/location-django.css' %}">
+    <link rel="stylesheet" href="{% static 'css/location-base.css' %}">
+</head>
+<body>
+    <div class="location-list-container">
+        <div class="nav-links">
+            <a href="{% url 'app:location_django_list' %}">Django Native</a>
+            <a href="{% url 'app:location_rest_list' %}">REST Framework</a>
+        </div>
+
+        <div class="page-header">
+            <h1>{% trans "Location Detail" %}</h1>
+            <a href="{% url 'app:location_list' %}" class="btn btn-secondary">{% trans "Back to List" %}</a>
+        </div>
+
+        <div class="location-card">
+            <div class="location-card-header">
+                <div>
+                    <div class="location-name">{{ location.name }}</div>
+                    <div class="location-address">{{ location.address }}</div>
+                </div>
+                <div class="location-actions">
+                    <a href="{% url 'app:location_update' location.pk %}" class="btn">{% trans "Edit" %}</a>
+                    <a href="{% url 'app:location_delete' location.pk %}" class="btn btn-danger">{% trans "Delete" %}</a>
+                </div>
+            </div>
+            <div class="location-meta">
+                {% trans "Created" %}: {{ location.created_at|date:"d/m/Y H:i" }}
+                {% if location.updated_at != location.created_at %}
+                    | {% trans "Updated" %}: {{ location.updated_at|date:"d/m/Y H:i" }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

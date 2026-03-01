@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geoaddress"
+version = "0.1.0"
+description = "Python library for address geocoding and reverse geocoding. Provides a unified interface to multiple geocoding providers (Nominatim, Google Maps, Mapbox, etc.) using ProviderKit for provider management."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+  {name = "Octolo", email = "dev@octolo.tech"}
+]
+keywords = [
+  "geocoding",
+  "reverse-geocoding",
+  "address",
+  "geolocation",
+  "maps",
+  "nominatim",
+  "google-maps",
+  "mapbox",
+  "location",
+  "python",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+  "clicommands>=0.1.0",
+  "providerkit>=0.1.0",
+]
+
+[tool.setuptools]
+package-data = {geoaddress = [".commands.json"]}
+
+[project.scripts]
+geoaddress = "geoaddress.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hicinformatic/python-geoaddress"
+Repository = "https://github.com/hicinformatic/python-geoaddress"
+Documentation = "https://github.com/hicinformatic/python-geoaddress/tree/main/python-geoaddress#readme"
+Issues = "https://github.com/hicinformatic/python-geoaddress/issues"

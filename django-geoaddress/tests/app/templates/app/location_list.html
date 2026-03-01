@@ -1,0 +1,74 @@
+{% load i18n static boosted_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Locations" %}</title>
+    <link rel="stylesheet" href="{% static 'css/geoaddress_suggest.css' %}">
+    <link rel="stylesheet" href="{% static 'css/location-django.css' %}">
+    <link rel="stylesheet" href="{% static 'css/location-base.css' %}">
+</head>
+<body>
+    <div class="location-list-container">
+        <div class="nav-links">
+            <a href="{% url 'app:location_django_list' %}">Django Native</a>
+            <a href="{% url 'app:location_rest_list' %}">REST Framework</a>
+        </div>
+
+        <div class="page-header">
+            <h1>{% trans "Locations" %}</h1>
+            <a href="{% url 'app:location_create' %}" class="btn">{% trans "Add New Location" %}</a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" style="padding: 10px; margin-bottom: 20px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; color: #155724;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if locations %}
+            {% for location in locations %}
+                <div class="location-card">
+                    <div class="location-card-header">
+                        <div>
+                            <div class="location-name">{{ location.name }}</div>
+                            <div class="location-address">{{ location.address }}</div>
+                        </div>
+                        <div class="location-actions">
+                            <a href="{% url 'app:location_detail' location.pk %}" class="btn">{% trans "View" %}</a>
+                            <a href="{% url 'app:location_update' location.pk %}" class="btn">{% trans "Edit" %}</a>
+                            <a href="{% url 'app:location_delete' location.pk %}" class="btn btn-danger">{% trans "Delete" %}</a>
+                        </div>
+                    </div>
+                    <div class="location-meta">
+                        {% trans "Created" %}: {{ location.created_at|date:"d/m/Y H:i" }}
+                        {% if location.updated_at != location.created_at %}
+                            | {% trans "Updated" %}: {{ location.updated_at|date:"d/m/Y H:i" }}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+
+            {% if is_paginated %}
+                <div class="pagination" style="text-align: center; margin-top: 30px;">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-secondary">{% trans "Previous" %}</a>
+                    {% endif %}
+                    <span style="margin: 0 20px;">{% trans "Page" %} {{ page_obj.number }} {% trans "of" %} {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-secondary">{% trans "Next" %}</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-state">
+                <p>{% trans "No locations found." %}</p>
+                <a href="{% url 'app:location_create' %}" class="btn">{% trans "Create your first location" %}</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
