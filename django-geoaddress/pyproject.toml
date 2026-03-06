@@ -58,7 +58,7 @@ Issues = "https://github.com/hicinformatic/python-geoaddress/issues"
 license-files = ["../LICENSE"]
 
 [tool.setuptools.package-data]
-django_geoaddress = ["templates/**/*"]
+django_geoaddress = ["templates/**/*", "static/**/*"]
 
 [tool.django-stubs]
 django_settings_module = "tests.settings"
