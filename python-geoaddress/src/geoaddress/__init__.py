@@ -221,10 +221,21 @@ GEOADDRESS_FIELDS_SEARCH = {
     "geoaddress_id": GEOADDRESS_FIELDS_EXTENDED["geoaddress_id"],
 }
 
+from geoaddress.formatting import (
+    DEFAULT_DISPLAY,
+    format_address_lines,
+    format_address_text,
+    resolve_display,
+)
+
 __all__ = [
+    "DEFAULT_DISPLAY",
     "GEOADDRESS_FIELDS_DESCRIPTIONS",
     "GEOADDRESS_FIELDS_FORMATS",
     "GEOADDRESS_FIELDS_EXTENDED",
     "GEOADDRESS_FIELDS_SEARCH",
     "GEOADDRESS_FIELDS_ESSENTIALS",
+    "format_address_lines",
+    "format_address_text",
+    "resolve_display",
 ]

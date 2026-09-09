@@ -1,17 +1,36 @@
 {% load i18n static %}
-<div class="geoaddress-autocomplete-wrapper"
+<div class="geoaddress-autocomplete-wrapper{% if is_readonly %} geoaddress-autocomplete-readonly{% endif %}"
     name="{{ widget.name }}"
     data-autocomplete-url="{{ autocomplete_url }}"
     data-redirect-url="{{ redirect_url }}"
-    data-from-url-name="{{ request }}">
+    data-inspect-url="{{ inspect_url }}"
+    data-inspect-form-url="{{ inspect_form_url }}"
+    data-content-type="{{ content_type_id }}"
+    data-field-name="{{ field_name }}"
+    data-from-url-name="{{ request }}"
+    {% if is_readonly %}data-readonly="true"{% endif %}>
     <div class="geoaddress-autocomplete-field">
+        {% if is_readonly %}
+        <div class="geoaddress-autocomplete-readonly-value">
+            {% for line in readonly_lines %}
+            <div class="geoaddress-autocomplete-readonly-line">{{ line }}</div>
+            {% empty %}
+            <div class="geoaddress-autocomplete-readonly-line">—</div>
+            {% endfor %}
+        </div>
+        {% else %}
         <input type="search" id="{{ widget.name }}_geoaddress_autocomplete" name="{{ widget.name }}_geoaddress_autocomplete" value="{{ search_value }}" />
+        {% endif %}
         <div class="geoaddress-autocomplete-icons">
+            {% if not is_readonly %}
             <img src="{% static 'admin/img/icon-changelink.svg' %}" alt="Edit" class="geoaddress-autocomplete-edit-icon" />
+            {% endif %}
+            {% if inspect_url or inspect_form_url %}
             <a href="#" class="geoaddress-autocomplete-view-link geoaddress-autocomplete-hidden">
                 <img src="{% static 'admin/img/icon-viewlink.svg' %}" alt="View" 
                 class="geoaddress-autocomplete-view-icon" />
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -26,7 +45,7 @@
             {% for k, v in geoaddress_data.items %}
             <div class="geoaddress-data-field">
                 <label for="{{ widget.name }}_{{ k }}">{{ v.label }}</label>
-                <input type="text" name="{{ widget.name }}_{{ k }}" id="{{ widget.name }}_{{ k }}" value="{{ v.value }}" />
+                <input type="text" name="{{ widget.name }}_{{ k }}" id="{{ widget.name }}_{{ k }}" value="{{ v.value }}" {% if is_readonly %}readonly disabled{% endif %} />
             </div>
             {% endfor %}
         </div>
@@ -35,7 +54,7 @@
             {% for k, v in geoaddress_optionals.items %}
             <div class="geoaddress-data-field">
                 <label for="{{ widget.name }}_{{ k }}">{{ v.label }}</label>
-                <input type="text" name="{{ widget.name }}_{{ k }}" id="{{ widget.name }}_{{ k }}" value="{{ v.value }}" />
+                <input type="text" name="{{ widget.name }}_{{ k }}" id="{{ widget.name }}_{{ k }}" value="{{ v.value }}" {% if is_readonly %}readonly disabled{% endif %} />
             </div>
             {% endfor %}
         </div>
@@ -44,10 +63,10 @@
             {% for k, v in geoaddress_coordinates.items %}
             <div class="geoaddress-data-field">
                 <label for="{{ widget.name }}_{{ k }}">{{ v.label }}</label>
-                <input type="text" name="{{ widget.name }}_{{ k }}" id="{{ widget.name }}_{{ k }}" value="{{ v.value }}" />
+                <input type="text" name="{{ widget.name }}_{{ k }}" id="{{ widget.name }}_{{ k }}" value="{{ v.value }}" {% if is_readonly %}readonly disabled{% endif %} />
             </div>
             {% endfor %}
         </div>
     </div>
-    <textarea class="geoaddress-autocomplete-hidden" name="{{ widget.name }}" id="{{ widget.name }}">{{ widget.value }}</textarea>
+    <textarea class="geoaddress-autocomplete-hidden" name="{{ widget.name }}" id="{{ widget.name }}" {% if is_readonly %}disabled{% endif %}>{{ widget.value }}</textarea>
 </div>

@@ -1,0 +1,53 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans "Home" %}</a>
+    {% if changelist_url %}
+    &rsaquo; <a href="{{ changelist_url }}">{{ opts.verbose_name_plural|capfirst }}</a>
+    {% endif %}
+    {% if inspect_form_url %}
+    &rsaquo; <a href="{{ inspect_form_url }}">{% trans "Inspect address" %}</a>
+    {% endif %}
+    &rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="module aligned">
+    <p>
+        <strong>{% trans "Content type" %}:</strong> {{ content_type }}
+        &nbsp;|&nbsp;
+        <strong>{% trans "ID" %}:</strong> {{ object_id }}
+        &nbsp;|&nbsp;
+        <strong>{% trans "Field" %}:</strong> {{ field_name }}
+        {% if instance_label %}
+        &nbsp;|&nbsp;
+        <strong>{% trans "Object" %}:</strong> {{ instance_label }}
+        {% endif %}
+    </p>
+</div>
+
+<fieldset class="module aligned">
+    <h2>{% trans "Stored field" %}</h2>
+    <pre style="white-space: pre-wrap; padding: 12px;">{{ stored_json }}</pre>
+</fieldset>
+
+<fieldset class="module aligned">
+    <h2>
+        {% trans "API response" %}
+        {% if geoaddress_id %}
+        <span style="font-weight: normal;">({{ geoaddress_id }})</span>
+        {% endif %}
+    </h2>
+    {% if api_error %}
+    <p class="errornote">{{ api_error }}</p>
+    {% endif %}
+    <pre style="white-space: pre-wrap; padding: 12px;">{{ api_response|default:"—" }}</pre>
+</fieldset>
+
+<p>
+    <a href="{{ inspect_form_url }}" class="button">{% trans "Inspect another field" %}</a>
+</p>
+{% endblock %}

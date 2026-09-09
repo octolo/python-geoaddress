@@ -2,6 +2,18 @@
     display: none;
 }
 
+.geoaddress-autocomplete-readonly-value {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 4px 0;
+    line-height: 1.4;
+}
+
+.geoaddress-autocomplete-readonly-line {
+    display: block;
+}
+
 .geoaddress-autocomplete-wrapper > .geoaddress-autocomplete-field {
     display: flex;
     align-items: center;

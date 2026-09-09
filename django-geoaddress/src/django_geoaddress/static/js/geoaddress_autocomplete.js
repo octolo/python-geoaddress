@@ -44,16 +44,64 @@ const text = (data) => {
     .join(', ');
 }
 
-const fill_data = (data, view, redirect) => {
-    if(data.geoaddress_id) {
-        const from_url = window.location.pathname;
-        view.href = `${redirect}?from_url=${from_url}&geoaddress_id=${data.geoaddress_id}`;
-        toggle(view, true);
-    }else{
-        toggle(view, false);
-        view.href = '#';
+const objectIdName = (fieldName) => fieldName.replace(/[^.-]+$/, 'id');
+
+const getObjectId = (fieldName) => {
+    const input = document.querySelector(`[name="${objectIdName(fieldName)}"]`);
+    return input?.value || '';
+};
+
+const buildInspectUrl = (wrapper, fieldName) => {
+    const inspectUrl = wrapper.dataset.inspectUrl;
+    const formUrl = wrapper.dataset.inspectFormUrl;
+    const contentType = wrapper.dataset.contentType;
+    const field = wrapper.dataset.fieldName || fieldName.split('-').pop();
+    const objectId = getObjectId(fieldName);
+    if (inspectUrl && contentType && objectId && field) {
+        const params = new URLSearchParams({
+            content_type: contentType,
+            object_id: objectId,
+            field,
+        });
+        return `${inspectUrl}?${params}`;
     }
-}
+    if (formUrl) {
+        const params = new URLSearchParams();
+        if (contentType) params.set('content_type', contentType);
+        if (field) params.set('field', field);
+        if (objectId) params.set('object_id', objectId);
+        const query = params.toString();
+        return query ? `${formUrl}?${query}` : formUrl;
+    }
+    return '';
+};
+
+const isAdminContext = () =>
+    document.body.classList.contains('change-form') ||
+    document.body.classList.contains('change-list') ||
+    Boolean(document.getElementById('nav-sidebar'));
+
+const updateViewLink = (wrapper, fieldName) => {
+    const view = wrapper.querySelector(`.${config.cls.viewLink}`);
+    if (!view) return;
+    if (!isAdminContext()) {
+        view.href = '#';
+        toggle(view, false);
+        return;
+    }
+    const href = buildInspectUrl(wrapper, fieldName || wrapper.getAttribute('name'));
+    if (href) {
+        view.href = href;
+        toggle(view, true);
+    } else {
+        view.href = '#';
+        toggle(view, false);
+    }
+};
+
+const fill_data = (data, view, wrapper, fieldName) => {
+    updateViewLink(wrapper, fieldName);
+};
 
 const getDataKey = (inputName, baseName) =>
     inputName.startsWith(baseName + '_')
@@ -105,7 +153,7 @@ const fetch_addresses = (name, query) => {
                         const key = getDataKey(input.name, name);
                         input.value = addr_json[key] || '';
                     });
-                    fill_data(data, field.viewLink, field.redirectUrl);
+                    fill_data(data, field.viewLink, wrapper, name);
                     if (field.searchInput) field.searchInput.value = text(address);
                     toggle(field.results, false);
                 });
@@ -124,10 +172,17 @@ const fetch_addresses = (name, query) => {
 
 
 
+const isReadonly = (wrapper) =>
+    wrapper?.dataset?.readonly === 'true' || wrapper?.classList?.contains('geoaddress-autocomplete-readonly');
+
 const initializeGeoaddressWidget = (wrapper) => {
     const name = wrapper.getAttribute('name');
     
     if (!name || name.includes('__prefix__')) {
+        return;
+    }
+    if (isReadonly(wrapper)) {
+        updateViewLink(wrapper, name);
         return;
     }
     
@@ -167,13 +222,13 @@ const initializeGeoaddressWidget = (wrapper) => {
                 data[key] = inp.value;
             });
             data.text = text(data);
-            fill_data(data, field.viewLink, field.redirectUrl);
+            fill_data(data, field.viewLink, wrapper, name);
             field.textarea.value = JSON.stringify(data);
             field.searchInput.value = data.text;
         });
     });
-    
 
+    updateViewLink(wrapper, name);
     wrapper.dataset.geoaddressInitialized = 'true';
 }
 
@@ -187,7 +242,7 @@ document.addEventListener('DOMContentLoaded', initializeAllGeoaddressWidgets);
 document.addEventListener('click', (e) => {
     if (e.target.closest(`.${config.cls.editIcon}`)) {
         const wrapper = e.target.closest(`.${config.cls.wrapper}`);
-        if (wrapper) {
+        if (wrapper && !isReadonly(wrapper)) {
             const dataFields = wrapper.querySelector(`.${config.cls.dataFields}`);
             if (dataFields) {
                 e.stopPropagation();
@@ -210,7 +265,7 @@ document.addEventListener('focusin', (e) => {
     const name = getNameFromInput(input);
     if (!name || name.includes('__prefix__')) return;
     const wrapper = input.closest(`.${config.cls.wrapper}`);
-    if (!wrapper) return;
+    if (!wrapper || isReadonly(wrapper)) return;
     wrapper.setAttribute('name', name);
     if (wrapper.dataset.geoaddressInitialized !== 'true') initializeGeoaddressWidget(wrapper);
     if (fields[name]?.list) fetch_addresses(name, input.value.trim());
@@ -221,7 +276,7 @@ document.addEventListener('input', (e) => {
     const name = getNameFromInput(input);
     if (!name || name.includes('__prefix__')) return;
     const wrapper = input.closest(`.${config.cls.wrapper}`);
-    if (!wrapper) return;
+    if (!wrapper || isReadonly(wrapper)) return;
     wrapper.setAttribute('name', name);
     if (wrapper.dataset.geoaddressInitialized !== 'true') initializeGeoaddressWidget(wrapper);
     
