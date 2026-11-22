@@ -1,16 +1,45 @@
 """Admin for tests.app."""
 
 from django.contrib import admin
+from geoaddress import format_address_lines
+
+from django_geoaddress.fields import GeoaddressAutocompleteWidget
 
 from .forms import LocationReadonlyForm
 from .models import Addressbook, Location, LocationReadonly
 
 
+class LocationAddressPreviewMixin:
+    """Display the address widget as read-only in a changelist."""
+
+    @property
+    def media(self):
+        """Include the widget assets in the changelist."""
+        return super().media + GeoaddressAutocompleteWidget().media
+
+    @admin.display(description='Address')
+    def address_display(self, obj):
+        """Render the stored address with its configured display layout."""
+        field = obj._meta.get_field('address')
+        widget = GeoaddressAutocompleteWidget(
+            attrs={'readonly': True, 'data_object_id': str(obj.pk)},
+            display=field.display,
+            model=type(obj),
+            field_name='address',
+        )
+        address = obj.address
+        if (
+            address
+            and address.get('text')
+            and not format_address_lines(address, field.display)
+        ):
+            address = {**address, 'address_line1': address['text']}
+        return widget.render(f'address-preview-{obj.pk}', address)
+
 
 @admin.register(Location)
-class LocationAdmin(admin.ModelAdmin):
+class LocationAdmin(LocationAddressPreviewMixin, admin.ModelAdmin):
     """Admin for Location model."""
-
     list_display = ["name", "address_display", "created_at", "updated_at"]
     list_filter = ["created_at", "updated_at"]
     search_fields = ["name"]
@@ -23,14 +52,6 @@ class LocationAdmin(admin.ModelAdmin):
             "fields": ["created_at", "updated_at"],
         }),
     ]
-
-    def address_display(self, obj):
-        """Display address text."""
-        if obj.address and obj.address.get("text"):
-            return obj.address["text"]
-        return "-"
-    
-    address_display.short_description = "Address"
 
 class LocationInline(admin.TabularInline):
     """Inline for Location model."""
@@ -51,7 +72,7 @@ class LocationReadonlyInline(admin.TabularInline):
 
 
 @admin.register(LocationReadonly)
-class LocationReadonlyAdmin(admin.ModelAdmin):
+class LocationReadonlyAdmin(LocationAddressPreviewMixin, admin.ModelAdmin):
     """Admin for LocationReadonly: address is locked after it is first saved."""
 
     form = LocationReadonlyForm
@@ -67,15 +88,6 @@ class LocationReadonlyAdmin(admin.ModelAdmin):
             "fields": ["created_at", "updated_at"],
         }),
     ]
-
-    def address_display(self, obj):
-        """Display address text."""
-        if obj.address and obj.address.get("text"):
-            return obj.address["text"]
-        return "-"
-
-    address_display.short_description = "Address"
-
 
 @admin.register(Addressbook)
 class AddressbookAdmin(admin.ModelAdmin):

@@ -80,6 +80,49 @@ The `GeoaddressField` stores address data as JSON with the following structure:
 }
 ```
 
+### Country flag URLs
+
+The built-in FlagCDN processor is used by default. For an address with
+`country_code='FR'`, `instance.address.flag_url` returns
+`https://flagcdn.com/fr.svg`. The URL is computed on access; it is not stored
+in the address JSON and no HTTP request is made by Geoaddress.
+
+To use another CDN or local assets, set `GEOADDRESS_FLAG_URL_PROCESSOR` to the
+dotted path of your own function. It receives a trimmed, uppercase two-letter
+country code and returns a URL string or `None`. Set
+`GEOADDRESS_FLAG_URL_PROCESSOR = None` to disable flag URLs. The property also
+returns `None` when the country code is missing or malformed.
+The address widget shows the flag on the right of the search field when a URL
+is available and updates it when an autocomplete result is selected or the
+country code changes. The browser requests the configured image URL.
+The demonstration app's Location changelists use the same widget in read-only
+mode to preview stored addresses.
+
+### Clean up existing addresses
+
+Preview address normalization without writing to the database:
+
+```bash
+python manage.py normalize_geoaddresses
+```
+
+Add `--apply` to confirm changes for each field with `y`. Press Enter or
+answer `n` to skip that field:
+
+```bash
+python manage.py normalize_geoaddresses --apply
+```
+
+The command discovers `GeoaddressField` columns on installed, managed models
+and reports the number of rows it would change for each field. Use
+`--database ALIAS` to select a database other than `default`. It normalizes
+postal whitespace and uppercases country and subdivision codes. It does not
+lowercase address labels, geocode addresses, or merge records.
+
+Only the confirmed address fields are updated; model `save()` hooks, signals,
+and automatic timestamps are not triggered. Each confirmed field is saved in
+its own transaction.
+
 ## Admin Interface
 
 Django-geoaddress provides admin interfaces for:

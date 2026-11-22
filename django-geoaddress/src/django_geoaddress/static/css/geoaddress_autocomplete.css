@@ -14,6 +14,12 @@
     display: block;
 }
 
+#changelist .geoaddress-autocomplete-readonly-value {
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: inherit;
+}
+
 .geoaddress-autocomplete-wrapper > .geoaddress-autocomplete-field {
     display: flex;
     align-items: center;
@@ -21,8 +27,34 @@
     width: 450px;
 }
 
-.geoaddress-autocomplete-wrapper >.geoaddress-autocomplete-field > input {
+.geoaddress-autocomplete-input {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.geoaddress-autocomplete-input > input {
     width: 100%;
+}
+
+.geoaddress-autocomplete-input-with-flag > input,
+.geoaddress-autocomplete-input-with-flag > .geoaddress-autocomplete-readonly-value {
+    box-sizing: border-box;
+    padding-right: 40px;
+}
+
+.geoaddress-autocomplete-input-with-flag > input::-webkit-search-cancel-button {
+    margin-right: 30px;
+}
+
+.geoaddress-autocomplete-flag {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: auto;
+    pointer-events: none;
 }
 
 .geoaddress-autocomplete-wrapper > .geoaddress-autocomplete-field > .geoaddress-autocomplete-icons {

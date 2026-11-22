@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-geoaddress"
-version = "1.0.3"
+version = "1.1.0"
 description = "Django integration for address verification and geocoding. Provides Django fields, widgets, and admin integration for the geoaddress library."
 readme = "README.md"
 authors = [{ name = "Octolo", email = "dev@octolo.tech" }]
@@ -39,7 +39,7 @@ classifiers = [
 dependencies = [
     "Django>=5.0,<6.0",
     "providerkit>=1.1.2",
-    "geoaddress>=0.1.0",
+    "geoaddress>=1.1.0",
     "django-boosted>=0.1.0",
     "django-providerkit>=1.1.2",
     "django-virtualqueryset>=0.1.0",
@@ -60,6 +60,7 @@ django_settings_module = "tests.settings"
 [project.optional-dependencies]
 test = [
   "pytest>=8",
+  "pytest-django",
   "djangorestframework",
   "python-dotenv",
 ]

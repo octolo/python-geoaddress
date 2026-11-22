@@ -56,7 +56,7 @@ const buildInspectUrl = (wrapper, fieldName) => {
     const formUrl = wrapper.dataset.inspectFormUrl;
     const contentType = wrapper.dataset.contentType;
     const field = wrapper.dataset.fieldName || fieldName.split('-').pop();
-    const objectId = getObjectId(fieldName);
+    const objectId = wrapper.dataset.objectId || getObjectId(fieldName);
     if (inspectUrl && contentType && objectId && field) {
         const params = new URLSearchParams({
             content_type: contentType,
@@ -110,6 +110,33 @@ const getDataKey = (inputName, baseName) =>
 
 const fields = {};
 
+const updateFlag = (field, countryCode) => {
+    if (!field.flag || !field.flagUrl) return;
+    clearTimeout(field.flagTimer);
+    if (field.flagController) field.flagController.abort();
+    field.flag.removeAttribute('src');
+    toggle(field.flag, false);
+    const code = String(countryCode || '').trim();
+    if (!/^[a-zA-Z]{2}$/.test(code)) return;
+    const controller = new AbortController();
+    field.flagController = controller;
+    field.flagTimer = setTimeout(() => {
+        const params = new URLSearchParams({country_code: code});
+        fetch(`${field.flagUrl}?${params}`, {signal: controller.signal})
+            .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+            .then(data => {
+                if (controller.signal.aborted || !data.flag_url) return;
+                field.flag.src = data.flag_url;
+                toggle(field.flag, true);
+            })
+            .catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error('Unable to load address flag URL:', error);
+                }
+            });
+    }, 250);
+};
+
 const fetch_addresses = (name, query) => {
     let field = fields[name];
     if (!field?.list) {
@@ -153,7 +180,8 @@ const fetch_addresses = (name, query) => {
                         const key = getDataKey(input.name, name);
                         input.value = addr_json[key] || '';
                     });
-                    fill_data(data, field.viewLink, wrapper, name);
+                    updateFlag(field, addr_json.country_code);
+                    fill_data(data, field.viewLink, field.wrapper, name);
                     if (field.searchInput) field.searchInput.value = text(address);
                     toggle(field.results, false);
                 });
@@ -208,6 +236,10 @@ const initializeGeoaddressWidget = (wrapper) => {
         searchInput: wrapper.querySelector('input[type="search"]'),
         dataInputs: Array.from(dataFields.querySelectorAll('input')),
         textarea: wrapper.querySelector('textarea'),
+        flag: wrapper.querySelector('.geoaddress-autocomplete-flag'),
+        flagUrl: wrapper.dataset.flagUrl,
+        flagController: null,
+        flagTimer: null,
         controller: null,
         debounceTimer: null,
     };
@@ -222,6 +254,9 @@ const initializeGeoaddressWidget = (wrapper) => {
                 data[key] = inp.value;
             });
             data.text = text(data);
+            if (getDataKey(input.name, name) === 'country_code') {
+                updateFlag(field, input.value);
+            }
             fill_data(data, field.viewLink, wrapper, name);
             field.textarea.value = JSON.stringify(data);
             field.searchInput.value = data.text;

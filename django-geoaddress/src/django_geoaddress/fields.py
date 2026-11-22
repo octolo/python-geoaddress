@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.forms.widgets import TextInput
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
+from django.utils.module_loading import import_string
 from geoaddress import (
     DEFAULT_DISPLAY,
     GEOADDRESS_FIELDS_ESSENTIALS,
@@ -31,6 +34,28 @@ class GeoaddressValue(dict):
         """Format address using GEOADDRESS_FIELDS_ESSENTIALS order."""
         parts = [str(self.get(k)) for k in GEOADDRESS_FIELDS_ESSENTIALS.keys() if self.get(k)]
         return ", ".join(parts)
+
+    @property
+    def flag_url(self) -> str | None:
+        """Return the configured flag URL, if available.
+
+        Returns:
+            The processor result, or None if the processor is disabled or
+            the address has no two-letter country code.
+        """
+        processor_path = getattr(
+            settings,
+            'GEOADDRESS_FLAG_URL_PROCESSOR',
+            'django_geoaddress.processors.flagcdn_url',
+        )
+        country_code = self.get('country_code')
+        if processor_path is None or not isinstance(country_code, str):
+            return None
+        country_code = country_code.strip()
+        if not re.fullmatch('[A-Za-z]{2}', country_code):
+            return None
+        processor = import_string(processor_path)
+        return processor(country_code.upper())
 
 
 class GeoaddressAutocompleteWidget(TextInput):
@@ -94,6 +119,20 @@ class GeoaddressAutocompleteWidget(TextInput):
             values = {}
 
         context["value"] = values
+        flag_enabled = getattr(
+            settings,
+            'GEOADDRESS_FLAG_URL_PROCESSOR',
+            'django_geoaddress.processors.flagcdn_url',
+        ) is not None
+        context['flag_enabled'] = flag_enabled
+        context['flag_url'] = (
+            GeoaddressValue(values).flag_url
+            if flag_enabled and isinstance(values, dict)
+            else None
+        )
+        context['flag_lookup_url'] = (
+            reverse('django_geoaddress:flag_url') if flag_enabled else ''
+        )
         context["readonly_lines"] = format_address_lines(values, self.display) if isinstance(values, dict) else []
         geoaddress_data = {
             k: {

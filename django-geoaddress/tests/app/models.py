@@ -31,6 +31,7 @@ class Location(models.Model):
         help_text=_("Location name"),
     )
     address = GeoaddressField()
+    secondary_address = GeoaddressField(null=True, blank=True)
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Created at"),

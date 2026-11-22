@@ -7,20 +7,27 @@
     data-inspect-form-url="{{ inspect_form_url }}"
     data-content-type="{{ content_type_id }}"
     data-field-name="{{ field_name }}"
+    {% if widget.attrs.data_object_id %}data-object-id="{{ widget.attrs.data_object_id }}"{% endif %}
+    {% if flag_enabled %}data-flag-url="{{ flag_lookup_url }}"{% endif %}
     data-from-url-name="{{ request }}"
     {% if is_readonly %}data-readonly="true"{% endif %}>
     <div class="geoaddress-autocomplete-field">
-        {% if is_readonly %}
-        <div class="geoaddress-autocomplete-readonly-value">
-            {% for line in readonly_lines %}
-            <div class="geoaddress-autocomplete-readonly-line">{{ line }}</div>
-            {% empty %}
-            <div class="geoaddress-autocomplete-readonly-line">—</div>
-            {% endfor %}
+        <div class="geoaddress-autocomplete-input{% if flag_enabled %} geoaddress-autocomplete-input-with-flag{% endif %}">
+            {% if is_readonly %}
+            <div class="geoaddress-autocomplete-readonly-value">
+                {% for line in readonly_lines %}
+                <div class="geoaddress-autocomplete-readonly-line">{{ line }}</div>
+                {% empty %}
+                <div class="geoaddress-autocomplete-readonly-line">—</div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <input type="search" id="{{ widget.name }}_geoaddress_autocomplete" name="{{ widget.name }}_geoaddress_autocomplete" value="{{ search_value }}" />
+            {% endif %}
+            {% if flag_enabled %}
+            <img class="geoaddress-autocomplete-flag{% if not flag_url %} geoaddress-autocomplete-hidden{% endif %}"{% if flag_url %} src="{{ flag_url }}"{% endif %} alt="" />
+            {% endif %}
         </div>
-        {% else %}
-        <input type="search" id="{{ widget.name }}_geoaddress_autocomplete" name="{{ widget.name }}_geoaddress_autocomplete" value="{{ search_value }}" />
-        {% endif %}
         <div class="geoaddress-autocomplete-icons">
             {% if not is_readonly %}
             <img src="{% static 'admin/img/icon-changelink.svg' %}" alt="Edit" class="geoaddress-autocomplete-edit-icon" />

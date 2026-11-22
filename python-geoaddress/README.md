@@ -139,6 +139,41 @@ All providers return addresses in a standardized format:
 }
 ```
 
+### Normalizing and comparing addresses
+
+Use `normalize_address()` to clean data for storage or display. It returns a
+new dictionary, cleans whitespace, and uppercases country and subdivision
+codes (`country_code`, `state_code`) without changing the casing of other
+postal text or the country name. It does not validate or translate codes.
+
+Use `address_key()` to compare structured addresses across providers:
+
+```python
+from geoaddress import address_key, normalize_address
+
+address = normalize_address({
+    'address_line1': ' 12  Rue de la Paix ',
+    'postal_code': '75002',
+    'city': 'Paris',
+    'country_code': 'fr',
+})
+other = {
+    'address_line1': '12 RUE DE LA PAIX',
+    'postal_code': '75002',
+    'city': 'PARIS',
+    'country_code': 'FR',
+    'country': 'France',
+}
+assert address_key(address) == address_key(other)
+```
+
+The key ignores case, whitespace differences, coordinates and provider
+metadata, but preserves accents, punctuation, and apartment or building
+details. The country name is compared only when no country code is supplied.
+This is not fuzzy matching: abbreviations and different field layouts are
+not reconciled. A key may be empty or represent an incomplete address; do not
+use a matching key alone as proof that two records should be merged.
+
 ## CLI Usage
 
 Geoaddress includes a CLI for command-line usage:

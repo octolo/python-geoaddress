@@ -1,6 +1,6 @@
 """lib example - Example Python library with src/ structure."""
 
-__version__ = "0.1.0"
+__version__ = '1.1.0'
 
 
 GEOADDRESS_FIELDS_ESSENTIALS = {
@@ -227,6 +227,7 @@ from geoaddress.formatting import (
     format_address_text,
     resolve_display,
 )
+from geoaddress.normalization import address_key, normalize_address
 
 __all__ = [
     "DEFAULT_DISPLAY",
@@ -235,7 +236,9 @@ __all__ = [
     "GEOADDRESS_FIELDS_EXTENDED",
     "GEOADDRESS_FIELDS_SEARCH",
     "GEOADDRESS_FIELDS_ESSENTIALS",
+    'address_key',
     "format_address_lines",
     "format_address_text",
+    'normalize_address',
     "resolve_display",
 ]

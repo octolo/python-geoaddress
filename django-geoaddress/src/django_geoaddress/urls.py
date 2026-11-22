@@ -10,11 +10,13 @@ from .views.suggest import (
     redirect_to_address,
 )
 from .views.index import index
+from .views.flag import flag_url
 
 app_name = "django_geoaddress"
 
 urlpatterns = [
     path("", index, name="index"),
+    path("flag-url/", flag_url, name="flag_url"),
     path("providers/<str:provider_name>/", detail_provider, name="detail_provider"),
     path("providers/", list_providers, name="list_providers"),
     path("suggest/redirect-to-address-list/", redirect_to_address_list, name="redirect_to_address_list"),
