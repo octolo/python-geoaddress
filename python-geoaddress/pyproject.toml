@@ -39,6 +39,7 @@ classifiers = [
 dependencies = [
   "clicommands>=0.1.0",
   "providerkit>=1.1.2",
+  "requests>=2.31.0",
 ]
 
 [tool.setuptools]
