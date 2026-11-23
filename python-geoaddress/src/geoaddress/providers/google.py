@@ -150,9 +150,12 @@ class GoogleMapsProvider(GeoaddressProvider):
             "address": query,
         }
 
-        lat, lon = self._parse_proximity(proximity)
-        if lat is not None and lon is not None:
-            params["location"] = f"{lat},{lon}"
+        bounds = self._proximity_bounds(
+            proximity, kwargs.pop('proximity_radius_km', 100),
+        )
+        if bounds is not None:
+            west, south, east, north = bounds
+            params['bounds'] = f'{south},{west}|{north},{east}'
 
         response = requests.get(
             f"{self._base_url}/geocode/json",
@@ -178,9 +181,12 @@ class GoogleMapsProvider(GeoaddressProvider):
             "address": query,
         }
 
-        lat, lon = self._parse_proximity(proximity)
-        if lat is not None and lon is not None:
-            params["location"] = f"{lat},{lon}"
+        bounds = self._proximity_bounds(
+            proximity, kwargs.pop('proximity_radius_km', 100),
+        )
+        if bounds is not None:
+            west, south, east, north = bounds
+            params['bounds'] = f'{south},{west}|{north},{east}'
 
         response = requests.get(
             f"{self._base_url}/geocode/json",

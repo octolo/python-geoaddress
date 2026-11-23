@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import cos, degrees, isfinite, radians
 from typing import Any, cast
 
 from providerkit import ProviderBase
@@ -128,20 +129,48 @@ class GeoaddressProvider(ProviderBase, ConfidenceMixin, RelevanceMixin):
         return ", ".join(parts)
 
     def _parse_proximity(self, proximity: str | None) -> tuple[float | None, float | None]:
-        """Parse proximity string to extract latitude and longitude."""
+        """Parse a latitude,longitude proximity string."""
         if not proximity:
             return None, None
 
         try:
-            parts = proximity.split(",")
-            if len(parts) == 2:
-                lat = float(parts[0].strip())
-                lon = float(parts[1].strip())
-                return lat, lon
-        except (ValueError, AttributeError):
-            pass
+            lat, lon = (float(part) for part in proximity.split(','))
+        except (ValueError, AttributeError) as exc:
+            raise ValueError('proximity must be latitude,longitude') from exc
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise ValueError('proximity coordinates are outside valid ranges')
+        return lat, lon
 
-        return None, None
+    def _proximity_bounds(
+        self, proximity: str | None, radius_km: float = 100,
+    ) -> tuple[float, float, float, float] | None:
+        """Calculate a non-crossing west, south, east, north bias box.
+
+        Args:
+            proximity: Centre as latitude,longitude, or None.
+            radius_km: Approximate distance from the centre to each side.
+
+        Returns:
+            Geographic bounds, or None when no proximity is supplied.
+
+        Raises:
+            ValueError: If the coordinates or radius are invalid.
+        """
+        lat, lon = self._parse_proximity(proximity)
+        if lat is None or lon is None:
+            return None
+        if not isfinite(radius_km) or radius_km <= 0:
+            raise ValueError('proximity_radius_km must be positive and finite')
+        lat_offset = degrees(radius_km / 6371.0088)
+        south = max(-90.0, lat - lat_offset)
+        north = min(90.0, lat + lat_offset)
+        lon_offset = lat_offset / cos(radians(lat))
+        west, east = lon - lon_offset, lon + lon_offset
+        if south == north or west == east:
+            raise ValueError('proximity_radius_km is too small')
+        if south == -90 or north == 90 or west <= -180 or east >= 180:
+            return -180.0, south, 180.0, north
+        return west, south, east, north
 
     def get_insert_normalized_relevance(self, data: Any, normalized: dict[str, Any], _config: dict[str, Any]) -> float | None:
         service_name = getattr(self, 'current_service_name', None)

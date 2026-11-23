@@ -68,6 +68,38 @@ results = addresses_autocomplete(
 )
 ```
 
+### Geographic preference
+
+Pass `proximity` as `latitude,longitude` to `search_addresses()` or
+`addresses_autocomplete()` to request that providers favor results near a
+point:
+
+```python
+from geoaddress.helpers import addresses_autocomplete
+
+results = addresses_autocomplete(
+    'Rue de la Paix',
+    proximity='48.8566,2.3522',
+    proximity_radius_km=25,
+)
+```
+
+Nominatim, Maps.co, LocationIQ and Google use an approximate rectangular
+preference area, with a default distance of 100 km from the centre to each
+side. `proximity_radius_km` changes that distance and must be positive and
+finite. Near a pole or the antimeridian, the rectangle spans all longitudes
+to avoid invalid or crossing bounds. The radius does not affect providers
+that use a point-based preference instead. With a proximity, invalid
+coordinates or an invalid radius for these four providers produce a provider
+error in the public API's response.
+
+The rectangle is a preference, not a geographical filter. Provider ranking
+and result limits still apply: results outside the rectangle may appear or
+may be omitted by the provider. Geoaddress does not sort results by distance
+or guarantee their order across providers. HERE's legacy API uses its
+existing `prox` parameter; its behavior outside the specified area has not
+been verified.
+
 ### Provider Configuration
 
 Providers can be configured via environment variables or configuration files:

@@ -58,6 +58,26 @@ The `GeoaddressField` automatically uses the `GeoaddressAutocompleteWidget` whic
 - Address search across multiple providers
 - Structured address data storage
 
+### Search API geographic preference
+
+The `suggest/` endpoint accepts optional `proximity` and
+`proximity_radius_km` query parameters:
+
+```text
+/geoaddress/suggest/?q=Paris&format=json&proximity=48.8566,2.3522&proximity_radius_km=1
+```
+
+Coordinates are `latitude,longitude` and the radius is in kilometres. An
+empty value, `None` or `null` is treated as omitted. Without a proximity,
+no geographic preference is sent and any valid radius is ignored. With a
+proximity, an omitted radius defaults to 100 km for providers using a
+rectangular preference area. A supplied radius must be positive and finite;
+invalid parameters return HTTP 400 with a JSON `error`.
+The radius has no effect on providers using a point-based preference.
+This is a provider preference, not a filter or a guarantee of ordering;
+the existing HERE integration's behavior outside its area is unverified.
+The admin autocomplete endpoint and widget do not forward these parameters.
+
 ## Address Field
 
 The `GeoaddressField` stores address data as JSON with the following structure:

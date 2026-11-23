@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from math import cos, degrees, isfinite, radians
+from typing import Any
+
+from django.http import HttpRequest, HttpResponse, JsonResponse, QueryDict
 from django.shortcuts import render, redirect
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 
@@ -14,6 +17,67 @@ from ..models.suggest import AddressModel
 from . import geoaddressview_enabled_and_login
 
 
+def _optional_query_value(params: QueryDict, name: str) -> str | None:
+    """Treat empty and null-like query values as absent."""
+    value = params.get(name)
+    if value is None or value.strip().lower() in ('', 'none', 'null'):
+        return None
+    return value.strip()
+
+
+def _proximity_parameters(params: QueryDict) -> dict[str, str | float]:
+    """Validate and extract proximity parameters from a request.
+
+    Args:
+        params: Request query parameters.
+
+    Returns:
+        Validated parameters to forward to the provider.
+
+    Raises:
+        ValueError: If the coordinates or radius are invalid.
+    """
+    proximity = _optional_query_value(params, 'proximity')
+    radius = _optional_query_value(params, 'proximity_radius_km')
+    if proximity is None:
+        if radius is not None:
+            _proximity_radius(radius, None, None)
+        return {}
+    try:
+        lat, lon = (float(part) for part in proximity.split(','))
+    except ValueError as exc:
+        raise ValueError('proximity must be latitude,longitude') from exc
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError('proximity coordinates are outside valid ranges')
+    result: dict[str, str | float] = {'proximity': proximity}
+    if radius is not None:
+        result['proximity_radius_km'] = _proximity_radius(radius, lat, lon)
+    return result
+
+
+def _proximity_radius(
+    value: str, lat: float | None, lon: float | None,
+) -> float:
+    """Validate a radius before forwarding it to a provider."""
+    try:
+        radius = float(value)
+    except ValueError as exc:
+        raise ValueError('proximity_radius_km must be a number') from exc
+    if not isfinite(radius) or radius <= 0:
+        raise ValueError('proximity_radius_km must be positive and finite')
+    if lat is None or lon is None:
+        return radius
+    # Check that floating-point rounding does not collapse the bias box.
+    lat_offset = degrees(radius / 6371.0088)
+    lon_offset = lat_offset / cos(radians(lat))
+    if (
+        lat - lat_offset == lat + lat_offset
+        or lon - lon_offset == lon + lon_offset
+    ):
+        raise ValueError('proximity_radius_km is too small')
+    return radius
+
+
 @geoaddressview_enabled_and_login("GEOADDRESS_ADDRESSVIEW")
 def search_addresses(request: HttpRequest) -> HttpResponse:
     """Search addresses with filters.
@@ -23,6 +87,8 @@ def search_addresses(request: HttpRequest) -> HttpResponse:
         - bck: Backend name filter
         - first: Return first result only (1 or 0)
         - format: Response format ('html' or 'json', default: 'html')
+        - proximity: Preferred centre as latitude,longitude
+        - proximity_radius_km: Approximate preference radius in kilometres
 
     Returns:
         HTML or JSON response with address suggestions
@@ -32,12 +98,16 @@ def search_addresses(request: HttpRequest) -> HttpResponse:
     backend = request.GET.get("bck", "").strip() or None
     first_param = request.GET.get("first", "")
     first = first_param == "1" if first_param else False
+    try:
+        proximity_params = _proximity_parameters(request.GET)
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     # Get addresses using the same method as admin
     addresses = []
 
     if query:
-        kwargs = {"first": first}
+        kwargs: dict[str, Any] = {'first': first, **proximity_params}
         if backend:
             kwargs["attribute_search"] = {"name": backend}
         addresses = AddressModel.objects.addresses_autocomplete(query=query, **kwargs)

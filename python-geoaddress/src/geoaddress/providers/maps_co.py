@@ -131,10 +131,11 @@ class MapsCoProvider(GeoaddressProvider):
             "limit": 10,
         }
 
-        lat, lon = self._parse_proximity(proximity)
-        if lat is not None and lon is not None:
-            params["lat"] = str(lat)
-            params["lon"] = str(lon)
+        bounds = self._proximity_bounds(
+            proximity, kwargs.pop('proximity_radius_km', 100),
+        )
+        if bounds is not None:
+            params['viewbox'] = ','.join(map(str, bounds))
 
         response = requests.get(f"{self._base_url}/search", params=params, timeout=self.geoaddress_timeout)
         response.raise_for_status()
@@ -155,10 +156,11 @@ class MapsCoProvider(GeoaddressProvider):
             "limit": 10,
         }
 
-        lat, lon = self._parse_proximity(proximity)
-        if lat is not None and lon is not None:
-            params["lat"] = str(lat)
-            params["lon"] = str(lon)
+        bounds = self._proximity_bounds(
+            proximity, kwargs.pop('proximity_radius_km', 100),
+        )
+        if bounds is not None:
+            params['viewbox'] = ','.join(map(str, bounds))
 
         response = requests.get(f"{self._base_url}/search", params=params, timeout=self.geoaddress_timeout)
         response.raise_for_status()

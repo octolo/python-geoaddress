@@ -123,10 +123,11 @@ class NominatimProvider(GeoaddressProvider):
         kwargs.pop('raw', False)
         proximity = kwargs.pop('proximity', None)
         params = {"q": query, "format": "json", "addressdetails": 1, "limit": 10,}
-        lat, lon = self._parse_proximity(proximity)
-        if lat is not None and lon is not None:
-            params["lat"] = str(lat)
-            params["lon"] = str(lon)
+        bounds = self._proximity_bounds(
+            proximity, kwargs.pop('proximity_radius_km', 100),
+        )
+        if bounds is not None:
+            params['viewbox'] = ','.join(map(str, bounds))
 
         headers = {"User-Agent": self._user_agent}
         response = requests.get(
@@ -144,10 +145,11 @@ class NominatimProvider(GeoaddressProvider):
         kwargs.pop('raw', False)
         proximity = kwargs.pop('proximity', None)
         params = {"q": query, "format": "json", "addressdetails": 1, "limit": 10,}
-        lat, lon = self._parse_proximity(proximity)
-        if lat is not None and lon is not None:
-            params["lat"] = str(lat)
-            params["lon"] = str(lon)
+        bounds = self._proximity_bounds(
+            proximity, kwargs.pop('proximity_radius_km', 100),
+        )
+        if bounds is not None:
+            params['viewbox'] = ','.join(map(str, bounds))
 
         headers = {"User-Agent": self._user_agent}
         response = requests.get(
