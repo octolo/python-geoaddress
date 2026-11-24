@@ -8,6 +8,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    name: Ruff (progressive)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Ruff
+        run: python -m pip install ruff==0.15.18
+      - name: Lint (non-blocking during adoption)
+        id: lint
+        continue-on-error: true
+        run: python -m ruff check python-geoaddress/src django-geoaddress/src
+      - name: Report lint findings
+        if: steps.lint.outcome == 'failure'
+        run: |
+          echo "::warning::Ruff reported findings; see the lint step."
+          echo "Ruff is temporarily non-blocking." >> "$GITHUB_STEP_SUMMARY"
+
   tests:
     name: ${{ matrix.package_name }} tests py${{ matrix.python_version }} ${{ matrix.django_version }}
     runs-on: ubuntu-latest
@@ -73,9 +97,45 @@ jobs:
         working-directory: ${{ matrix.working_directory }}
         run: node --test tests/flag_widget.test.cjs
 
+  security:
+    name: Security ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: python-geoaddress
+            advisory: false
+          - package: django-geoaddress
+            advisory: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install security tools
+        run: python -m pip install bandit==1.9.4 pip-audit==2.10.1
+      - name: Static security scan
+        id: bandit
+        continue-on-error: ${{ matrix.advisory }}
+        working-directory: ${{ matrix.package }}
+        run: python -m bandit -q -r src -ll -ii
+      - name: Report security findings
+        if: steps.bandit.outcome == 'failure'
+        run: |
+          echo "::warning::Bandit reported findings or failed for ${{ matrix.package }}; see the security scan."
+          echo "Bandit requires review for ${{ matrix.package }}." >> "$GITHUB_STEP_SUMMARY"
+      - name: Audit runtime dependencies
+        working-directory: ${{ matrix.package }}
+        run: python -m pip_audit . --progress-spinner off
+
   build:
     name: Build ${{ matrix.package_name }}
-    needs: tests
+    needs: [tests, security]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -108,3 +168,70 @@ jobs:
           python -m pip install build twine
           python -m build
           python -m twine check dist/*
+
+  maintainability:
+    name: Radon maintainability
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Radon
+        id: radon_install
+        continue-on-error: true
+        run: python -m pip install radon==6.0.1
+      - name: Report installation failure
+        if: steps.radon_install.outcome == 'failure'
+        run: |
+          echo "::warning::Radon could not be installed; maintainability was not checked."
+          echo "Radon could not be installed; maintainability was not checked." >> "$GITHUB_STEP_SUMMARY"
+      - name: Report maintainability
+        if: steps.radon_install.outcome == 'success'
+        continue-on-error: true
+        run: |
+          for source in "django-geoaddress/src" "python-geoaddress/src"; do
+            if ! report=$(python -m radon mi "$source" -s -e '*/migrations/*'); then
+              echo "::warning::Radon could not generate the report for $source."
+              exit 1
+            fi
+            printf '### Radon maintainability index: %s\n\n```\n%s\n```\n' "$source" "$report" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  local-audit:
+    name: Full audit (progressive)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install audit dependencies
+        id: audit_setup
+        continue-on-error: true
+        run: |
+          python -m pip install -e "./python-geoaddress[test]" -e "./django-geoaddress[test]" "Django==5.2.*"
+          python -m pip install "ruff==0.15.18" mypy bandit pip-audit vulture radon xenon pytest pytest-django pytest-cov build twine
+      - name: Report setup failure
+        if: steps.audit_setup.outcome == 'failure'
+        run: |
+          echo "::warning::Audit dependencies could not be installed; the full audit did not run."
+          echo "Audit dependencies could not be installed; the full audit did not run." >> "$GITHUB_STEP_SUMMARY"
+      - name: Run audit
+        id: audit
+        if: steps.audit_setup.outcome == 'success'
+        continue-on-error: true
+        run: make audit PYTHON=python
+      - name: Report audit findings
+        if: steps.audit.outcome == 'failure'
+        run: |
+          echo "::warning::The full audit reported failures; see the audit step."
+          echo "Full audit reported failures; see the audit step." >> "$GITHUB_STEP_SUMMARY"
